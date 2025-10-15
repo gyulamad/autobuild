@@ -15,6 +15,7 @@
 #include "misc/array_shift.hpp"
 #include "misc/ucfirst.hpp"
 #include "misc/in_array.hpp"
+#include "misc/get_filename.hpp"
 #include <thread>
 #include <mutex>
 #include <queue>
@@ -97,6 +98,9 @@ protected:
 
     void process(Arguments& args) override {
 
+        if (args.has(PRM_CLEAN))
+            cleanProject();
+
         Arguments::Helps helps;
 
         args.setHelps(&helps);
@@ -130,8 +134,10 @@ protected:
             "Arguments to pass to the executable when running.");
         args.addHelp(PRM_SHARED, 
             "Build a shared library.");
-        args.addHelp(PRM_VERBOSE, 
+        args.addHelp(PRM_VERBOSE,
             "Enable verbose output.");
+        args.addHelp(PRM_CLEAN,
+            "Clean the project from all generated files and folders.");
 
             
         Stopper stopper;
@@ -435,6 +441,78 @@ protected:
         return builtOutputFiles;
     }
 
-protected:
+    void cleanProject() {
+        LOG("Starting project cleanup...");
+        const string projectRoot = get_cwd();
+
+        // 1. Delete build directories first for efficiency.
+        LOG("Removing build directories...");
+        const vector<string> topLevelEntries = readdir(projectRoot, "", false);
+        for (const string& entry : topLevelEntries) {
+            if (is_dir(entry) && str_starts_with(get_filename(entry), "build")) {
+                LOG("Deleting directory: " + entry);
+                Executor::execute("rm -rf \"" + entry + "\"");
+            }
+        }
+
+        // 2. Define all possible single-part artifact extensions (without the dot).
+        // Use constants where available.
+        vector<string> artifactExtensionParts = {
+            // Remove leading dot for comparison
+            string(EXT_O).erase(0, 1),
+            string(EXT_SO).erase(0, 1),
+            string(EXT_DEP).erase(0, 1),
+            // Others are not defined as constants
+            "test", "gdb", "cov", "gcda", "gcno"
+        };
+
+        // 3. Scan all remaining files recursively.
+        LOG("Scanning for generated artifacts...");
+        const vector<string> allFiles = readdir(projectRoot, ".*", true);
+
+        for (const string& file : allFiles) {
+            if (is_dir(file)) continue; // Skip directories
+
+            const string filename = get_filename(file);
+            const string filenameWithoutExt = get_filename_only(file);
+            const string extensionStr = get_extension_only(file);
+
+            // Case 1: No extension - check for a source file.
+            if (extensionStr.empty()) {
+                bool sourceExists = false;
+                for (const string& srcExt : EXTS_C_CPP) {
+                    if (file_exists(get_path(file) + "/" + filenameWithoutExt + srcExt)) {
+                        sourceExists = true;
+                        break;
+                    }
+                }
+                if (sourceExists) {
+                    LOG("Deleting executable: " + file);
+                    unlink(file);
+                }
+                continue;
+            }
+
+            // Case 2: Has an extension - check if ALL parts are artifact extensions.
+            const vector<string> extensionPieces = explode(".", filename);
+            if (extensionPieces.size() > 1) {
+                bool allPartsAreArtifacts = true;
+                for (size_t i = 1; i < extensionPieces.size(); ++i) {
+                    if (!in_array(extensionPieces[i], artifactExtensionParts)) {
+                        allPartsAreArtifacts = false;
+                        break;
+                    }
+                }
+
+                if (allPartsAreArtifacts) {
+                    LOG("Deleting artifact: " + file);
+                    unlink(file);
+                }
+            }
+        }
+
+        LOG("Project cleanup finished.");
+    }
+
     DynLoader loader;
 };
