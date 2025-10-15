@@ -15,6 +15,10 @@ autobuild/get-build.sh
 ```
 ./autobuild . --run
 ```
+*   Clean project:
+```
+./autobuild --clean
+```
 
 # Autobuild Tool
 
@@ -80,7 +84,7 @@ The `get-build.sh` script simplifies the compilation process of the `autobuild.c
 
 After running the script, the `autobuild` executable will be created in the same directory. You can then use this executable to perform various tasks, such as building your project, running tests, and generating reports.
 
-## Usage
+## Usage [TODO: simplify the readme, tell to use the --help argument and then update the help messages with these:]
 
 The `autobuild` executable accepts the following command-line parameters:
 
@@ -247,3 +251,5 @@ If you would like to contribute to the autobuild tool, please follow these guide
 *   Create a new branch for your changes.
 *   Make your changes and commit them with clear and concise commit messages.
 *   Submit a pull request to the main repository.
+
+[TODO: add `/misc` folder to the readme]
