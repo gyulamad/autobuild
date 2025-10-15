@@ -1,0 +1,13 @@
+#pragma once
+
+#include <string>
+#include <vector>
+
+using namespace std;
+
+// Struct to represent a single diff block
+typedef struct {
+    size_t bound[2];          // Line range where the difference occurs [start, end]
+    vector<string> added;  // Lines added in s2
+    vector<string> removed; // Lines removed from s1
+} str_diff_t;

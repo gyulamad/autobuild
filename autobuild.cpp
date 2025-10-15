@@ -1,4 +1,4 @@
-#include "../misc/TEST.hpp"
+#include "misc/TEST.hpp"
 
 #include "BuilderApp.hpp"
 
