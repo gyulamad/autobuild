@@ -14,7 +14,7 @@ cd "$SCRIPT_DIR" || exit 1
 
 # =========================================================
 
-g++ autobuild.cpp --std=c++20 -o autobuild
+g++ autobuild.cpp --std=c++20 -o "$ORIGINAL_DIR/autobuild"
 
 # =========================================================
 
