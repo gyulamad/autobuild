@@ -1,1 +1,0 @@
-g++ autobuild.cpp --std=c++20 -o autobuild
