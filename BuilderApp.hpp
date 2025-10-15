@@ -98,9 +98,6 @@ protected:
 
     void process(Arguments& args) override {
 
-        if (args.has(PRM_CLEAN))
-            cleanProject();
-
         Arguments::Helps helps;
 
         args.setHelps(&helps);
@@ -225,6 +222,23 @@ protected:
         //         args.get<string>(PRM_BUILD_FOLDER) : DIR_BUILD) 
         //     + (!modes.empty() ? SEP_MODES + implode(SEP_MODES, modes) : "")
         // );
+
+
+        // ====== clean first if needed ======
+
+        if (args.has(PRM_CLEAN)) {
+            if (!inputs.empty() && !inputs[0].empty()) {
+                vector<string> uniquePaths;
+                for (const string& input : inputs) {
+                    string path = get_path(input);
+                    if (!in_array(path, uniquePaths))
+                        uniquePaths.push_back(path);
+                }
+                for (const string& path : uniquePaths)
+                    cleanProject(path);
+            } else // If no input is given, clean the current working directory.
+                cleanProject(get_cwd());
+        }
 
         // ====== compilation starts at this point ======
 
@@ -441,9 +455,8 @@ protected:
         return builtOutputFiles;
     }
 
-    void cleanProject() {
-        LOG("Starting project cleanup...");
-        const string projectRoot = get_cwd();
+    void cleanProject(const string& projectRoot) {
+        LOG("Starting project cleanup in: " + projectRoot);
 
         // 1. Delete build directories first for efficiency.
         LOG("Removing build directories...");
