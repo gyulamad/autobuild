@@ -26,9 +26,10 @@ rm -f *.so.gdb.cov
 rm -f *.gcda
 rm -f *.gcno
 
-
 rm -rf .build*
 rm -f *.dep
+
+rm autobuild
 
 test_project/clean.sh
 dependencies/fltk/fltk/clean.sh

@@ -9,7 +9,7 @@
 *   Download or clone the main repo into your project root
 *   Get the autobuild tool, run:
 ```
-utils/autobuild/get-build.sh
+autobuild/get-build.sh
 ```
 *   Build and run your project:
 ```

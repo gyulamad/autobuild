@@ -1,0 +1,31 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**", // Includes headers in your project folder and subfolders
+                "/usr/include/**",
+                "/usr/include",         // Common include directory (Linux)
+                "/usr/include/c++/13",  // Example for C++ standard library (adjust version if needed)
+                "/usr/include/c++/13/**",
+                "/usr/include/x86_64-linux-gnu", // Example for architecture-specific includes
+                "/usr/include/x86_64-linux-gnu/c++/13/**",
+                "/usr/local/include",
+                "/usr/local/include/**",
+
+                // nlopt
+                "${workspaceFolder}/libs/stevengj/nlopt/v2.10.1/build",
+                "${workspaceFolder}/libs/stevengj/nlopt/v2.10.1/src/api"
+            ],
+            "defines": [
+                // "USE_CANDLES_AS_FLOAT"
+                // "USE_CANDLES_AS_DOUBLE", 
+            ],
+            "compilerPath": "/usr/bin/g++",
+            "cStandard": "c11",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}
