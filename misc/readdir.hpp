@@ -12,7 +12,7 @@ using namespace std;
 
 namespace fs = filesystem;
 
-vector<string> readdir(const string& dir, const string& pattern = "", bool recursive = true) {
+vector<string> readdir(const string& dir, const string& pattern = "", bool recursive = true, bool ignore_folders = true) {
     vector<string> result;
 
     if (!fs::exists(dir) || !fs::is_directory(dir)) {
@@ -22,7 +22,7 @@ vector<string> readdir(const string& dir, const string& pattern = "", bool recur
     // Local lambda to process directory entries
     auto process = [&](const auto& begin, const auto& end) {
         for (auto it = begin; it != end; ++it) {
-            if (it->is_regular_file()) {
+            if (!ignore_folders || it->is_regular_file()) {
                 string path = it->path().string();
                 if (pattern.empty()) {
                     result.push_back(path);
@@ -49,10 +49,10 @@ vector<string> readdir(const string& dir, const string& pattern = "", bool recur
     return result;
 }
 
-vector<string> readdir(const string& dir, const vector<string>& patterns, bool recursive = true) {
+vector<string> readdir(const string& dir, const vector<string>& patterns, bool recursive = true, bool ignore_folders = true) {
     vector<string> result;
     for (const string& pattern: patterns)
-        result = array_merge(result, readdir(dir, pattern, recursive));
+        result = array_merge(result, readdir(dir, pattern, recursive, ignore_folders));
     return result;
 }
 
@@ -150,6 +150,35 @@ TEST(test_readdir_invalid_directory) {
     assert(threw_exception);
 
     // No cleanup needed (directory doesn't exist)
+}
+
+TEST(test_readdir_recursive_ignore_folders) { // TODO: this test never ran, AI slop, needs to try and fix if fails
+    string test_dir = "test_dir";
+    test_readir_setup_test_directory(test_dir);
+
+    // Test 1: ignore_folders=true (default) - FILES ONLY
+    auto files_only = readdir(test_dir, "", true, true);
+    assert(files_only.size() == 4); // All 4 files
+    assert(find(files_only.begin(), files_only.end(), test_dir + "/file1.txt") != files_only.end());
+    assert(find(files_only.begin(), files_only.end(), test_dir + "/file2.jpg") != files_only.end());
+    assert(find(files_only.begin(), files_only.end(), test_dir + "/subdir1/file3.txt") != files_only.end());
+    assert(find(files_only.begin(), files_only.end(), test_dir + "/subdir1/subsubdir/file4.txt") != files_only.end());
+    // Folders should NOT be included
+    assert(find(files_only.begin(), files_only.end(), test_dir + "/subdir1") == files_only.end());
+    assert(find(files_only.begin(), files_only.end(), test_dir + "/subdir1/subsubdir") == files_only.end());
+
+    // Test 2: ignore_folders=false - FILES + FOLDERS
+    auto files_and_folders = readdir(test_dir, "", true, false);
+    assert(files_and_folders.size() == 6); // 4 files + 2 folders
+    assert(find(files_and_folders.begin(), files_and_folders.end(), test_dir + "/file1.txt") != files_and_folders.end());
+    assert(find(files_and_folders.begin(), files_and_folders.end(), test_dir + "/file2.jpg") != files_and_folders.end());
+    assert(find(files_and_folders.begin(), files_and_folders.end(), test_dir + "/subdir1/file3.txt") != files_and_folders.end());
+    assert(find(files_and_folders.begin(), files_and_folders.end(), test_dir + "/subdir1/subsubdir/file4.txt") != files_and_folders.end());
+    // Folders SHOULD be included
+    assert(find(files_and_folders.begin(), files_and_folders.end(), test_dir + "/subdir1") != files_and_folders.end());
+    assert(find(files_and_folders.begin(), files_and_folders.end(), test_dir + "/subdir1/subsubdir") != files_and_folders.end());
+
+    test_readir_cleanup_test_directory(test_dir);
 }
 
 #endif

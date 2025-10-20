@@ -460,12 +460,13 @@ protected:
 
         // 1. Delete build directories first for efficiency.
         LOG("Removing build directories...");
-        const vector<string> topLevelEntries = readdir(projectRoot, "", false);
+        const vector<string> topLevelEntries = readdir(projectRoot, "", true, false);
         for (const string& entry : topLevelEntries) {
-            if (is_dir(entry) && str_starts_with(get_filename(entry), "build")) {
-                LOG("Deleting directory: " + entry);
-                Executor::execute("rm -rf \"" + entry + "\"");
-            }
+            if (!is_dir(entry)) return;
+            if (entry == ".git") return;
+            if (!str_starts_with(get_filename(entry), DIR_BUILD_FOLDER)) return;
+            LOG("Deleting directory: " + entry);
+            Executor::execute("rm -rf \"" + entry + "\"");
         }
 
         // 2. Define all possible single-part artifact extensions (without the dot).
