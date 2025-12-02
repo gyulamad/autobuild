@@ -2,7 +2,7 @@
 // _DEPENDENCY: creator2/lib2, lib3:v0.0.3, somelib4
 // DEPENDENCY: fltk
 
-#include "../../misc/TEST.hpp"
+#include "../../../cpptools/misc/TEST.hpp"
 
 #include "header_only.hpp"
 #include "with_cpp.h"
