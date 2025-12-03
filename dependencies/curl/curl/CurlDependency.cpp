@@ -13,11 +13,15 @@ public:
     virtual ~CurlDependency() {}
 
     void install(const string version) override {
-        cout << "INSTALL lib curl (if not already), version: " << version << endl;
+        // TODO cout << "INSTALL lib curl (if not already), version: " << version << endl;
     }
 
     vector<string> flags() override {
-        return { "-Wl,--no-as-needed -lcurl" };
+        return { "-Wl,--no-as-needed" };
+    }
+
+    vector<string> libs() override {
+        return { "-lcurl" };
     }
 
 };

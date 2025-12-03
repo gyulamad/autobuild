@@ -13,12 +13,15 @@ public:
     virtual ~FltkDependency() {}
 
     void install(const string version) override {
-        // TODO
-        cout << "[TODO] INSTALL and BUILD FLTK (if not already), version: " << version << endl;
+        // TODO cout << "[TODO] INSTALL and BUILD FLTK (if not already), version: " << version << endl;
     }
 
     vector<string> flags() override {
-        return {};
+        return { };
+    }
+
+    vector<string> libs() override {
+        return { "`fltk-config --cxxflags --ldflags`" };
     }
 };
 

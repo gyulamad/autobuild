@@ -309,7 +309,7 @@ protected:
         const string& buildPath,
         const vector<string>& cppFiles,
         const vector<string>& modes,
-        vector<string>& flags,
+        const vector<string>& flags,
         const vector<string>& includeDirs,
         const vector<string>& libs,
         const string& outputExtension,
@@ -369,6 +369,7 @@ protected:
 
                     vector<string> dependencies = cache[2];
                     vector<string> dependencyFlags;
+                    vector<string> dependencyLibs;
                     for (const string& dependency: dependencies) {
                         string
                             creator = DEFAULT_DEPENDENCY_CREATOR,
@@ -396,6 +397,7 @@ protected:
                             Dependency* dependency = loader.load<Dependency>(libPathName);
                             dependency->install(version);
                             dependencyFlags = array_merge(dependencyFlags, dependency->flags());
+                            dependencyLibs = array_merge(dependencyLibs, dependency->libs());
                         }
                     }
 
@@ -418,7 +420,7 @@ protected:
                             array_merge(flags, dependencyFlags), 
                             includeDirs, 
                             linkObjectFiles,
-                            libs, 
+                            array_merge(libs, dependencyLibs),
                             strict, verbose
                         );
                         built = true;
