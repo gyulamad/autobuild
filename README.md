@@ -7,6 +7,7 @@
 # 5 minutes tutorial
 
 *   Download or clone the main repo next to your project root
+*   Download or clone the cpptools/misc repo relative to this folder into `../cpptools/misc` folder
 *   Get the autobuild tool, run:
 ```
 ../autobuild/get-build.sh
