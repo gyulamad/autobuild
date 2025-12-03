@@ -12,7 +12,7 @@ public:
     FltkDependency(): Dependency() {}
     virtual ~FltkDependency() {}
 
-    void install(const string version) override {
+    void install(const string /*version*/) override {
         // TODO cout << "[TODO] INSTALL and BUILD FLTK (if not already), version: " << version << endl;
     }
 

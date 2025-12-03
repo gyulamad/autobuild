@@ -12,7 +12,7 @@ public:
     CurlDependency(): Dependency() {}
     virtual ~CurlDependency() {}
 
-    void install(const string version) override {
+    void install(const string /*version*/) override {
         // TODO cout << "INSTALL lib curl (if not already), version: " << version << endl;
     }
 
