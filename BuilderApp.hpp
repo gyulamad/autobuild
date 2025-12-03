@@ -280,7 +280,7 @@ protected:
                 const string createCoverageCommand = 
                     "lcov --no-external --directory . --capture --output-file " 
                         + coverageInfoFilePath + " && \\"
-                    "php utils/autobuild/lcov-fixer.php " 
+                    "php ../autobuild/lcov-fixer.php " 
                         + coverageInfoFilePath + " && \\"
                     "genhtml -s --demangle-cpp -o " 
                         + coverageOutputPath 
@@ -309,7 +309,7 @@ protected:
         const string& buildPath,
         const vector<string>& cppFiles,
         const vector<string>& modes,
-        const vector<string>& flags,
+        vector<string>& flags,
         const vector<string>& includeDirs,
         const vector<string>& libs,
         const string& outputExtension,
@@ -368,6 +368,7 @@ protected:
                     foundImplementations = array_unique(foundImplementations);
 
                     vector<string> dependencies = cache[2];
+                    vector<string> dependencyFlags;
                     for (const string& dependency: dependencies) {
                         string
                             creator = DEFAULT_DEPENDENCY_CREATOR,
@@ -392,16 +393,19 @@ protected:
                         }
                         {
                             lock_guard<mutex> loaderLock(loaderMutex);
-                            loader.load<Dependency>(libPathName, version)->install();
+                            Dependency* dependency = loader.load<Dependency>(libPathName);
+                            dependency->install(version);
+                            dependencyFlags = array_merge(dependencyFlags, dependency->flags());
                         }
                     }
 
                     vector<string> linkObjectFiles;
                     // Recursive call with parallel=false to avoid nested parallelism
+                    vector<string> allflags = array_merge({ FLAG_COMPILE }, flags);
                     vector<string> builtObjectFiles = buildCppFiles(
                         linkObjectFiles, // allOutputFiles parameter
                         buildPath, foundImplementations, modes,
-                        array_merge({ FLAG_COMPILE }, flags), includeDirs, libs,
+                        allflags, includeDirs, libs,
                         EXT_O, false, strict, verbose
                     );
 
@@ -410,8 +414,12 @@ protected:
                         !file_exists(outputFile) || lastfmtime > filemtime_ms(outputFile)
                     ) {
                         this->buildSourceFile(
-                            cppFile, outputFile, flags, includeDirs, linkObjectFiles,
-                            libs, strict, verbose
+                            cppFile, outputFile, 
+                            array_merge(flags, dependencyFlags), 
+                            includeDirs, 
+                            linkObjectFiles,
+                            libs, 
+                            strict, verbose
                         );
                         built = true;
                     }
@@ -426,10 +434,10 @@ protected:
                     }
 
                     // Log if verbose
-                    if (verbose && built) {
-                        lock_guard<mutex> lock(outputMutex);
-                        LOG("(Re)built output file: " + outputFile);
-                    }
+                    // if (verbose && built) {
+                    //     lock_guard<mutex> lock(outputMutex);
+                    //     LOG("(Re)built output file: " + outputFile);
+                    // }
                 }
             } catch (...) {
                 lock_guard<mutex> lock(outputMutex);
@@ -456,7 +464,7 @@ protected:
     }
 
     void cleanProject(const string& projectRoot) {
-        LOG("Starting project cleanup in: " + projectRoot);
+        LOG("Starting project cleanup in: " + F(F_FILE, projectRoot));
 
         // 1. Delete build directories first for efficiency.
         LOG("Removing build directories...");
@@ -482,15 +490,16 @@ protected:
 
         // 3. Scan all remaining files recursively.
         LOG("Scanning for generated artifacts...");
-        const vector<string> allFiles = readdir(projectRoot, ".*", true);
-
-        for (const string& file : allFiles) {
+        const vector<string> allFiles = readdir(projectRoot, "*.*", true);
+        LOG("Found " + to_string(allFiles.size()) + " file(s) in project root: " 
+            + F(F_FILE, projectRoot));
+        for (const string& file : allFiles) { 
             if (is_dir(file)) continue; // Skip directories
 
             const string filename = get_filename(file);
             const string filenameWithoutExt = get_filename_only(file);
             const string extensionStr = get_extension_only(file);
-
+            
             // Case 1: No extension - check for a source file.
             if (extensionStr.empty()) {
                 bool sourceExists = false;
@@ -508,21 +517,42 @@ protected:
             }
 
             // Case 2: Has an extension - check if ALL parts are artifact extensions.
-            const vector<string> extensionPieces = explode(".", filename);
-            if (extensionPieces.size() > 1) {
-                bool allPartsAreArtifacts = true;
-                for (size_t i = 1; i < extensionPieces.size(); ++i) {
-                    if (!in_array(extensionPieces[i], artifactExtensionParts)) {
-                        allPartsAreArtifacts = false;
-                        break;
+            const vector<string> pathPieces = explode("/", filename);
+            const vector<string> extensionPieces = explode(".", pathPieces[pathPieces.size() - 1]);
+            int nth = 0;
+            bool inArtifactExtensions = false;
+            bool allPartsAreArtifacts = false;
+            for (const string& extensionPiece: extensionPieces) {
+                if (nth > 0) {
+                    if (!inArtifactExtensions) {
+                        if (in_array(extensionPieces[nth], artifactExtensionParts)) {
+                            inArtifactExtensions = true;
+                            allPartsAreArtifacts = true;
+                        }
+                    } else {
+                        if (!in_array(extensionPieces[nth], artifactExtensionParts)) {
+                            allPartsAreArtifacts = false;
+                            break;
+                        }
                     }
                 }
-
-                if (allPartsAreArtifacts) {
-                    LOG("Deleting artifact: " + file);
-                    unlink(file);
-                }
+                nth++;
             }
+            // const vector<string> extensionPieces = explode(".", filename);
+            // if (extensionPieces.size() > 1) {
+            //     bool allPartsAreArtifacts = extensionPieces.size() > 2;
+            //     for (size_t i = 2; i < extensionPieces.size(); ++i) {
+            //         if (!in_array(extensionPieces[i], artifactExtensionParts)) {
+            //             allPartsAreArtifacts = false;
+            //             break;
+            //         }
+            //     }
+
+            if (allPartsAreArtifacts) {
+                LOG("Deleting artifact: " + file);
+                unlink(file);
+            }
+            // }
         }
 
         LOG("Project cleanup finished.");

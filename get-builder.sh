@@ -13,6 +13,7 @@ cd "$SCRIPT_DIR" || exit 1
 
 
 # =========================================================
+echo "Compiling autobuild tool..."
 
 #mkdir -p ../cpptools/misc
 #git clone https://github.com/gyulamad/cpptools-misc.git ../cpptools/misc
@@ -22,12 +23,13 @@ TOOLS_DIR="../cpptools/misc"
 if [ ! -d "$TOOLS_DIR" ]; then
   mkdir "$TOOLS_DIR"
   echo "Directory '$TOOLS_DIR' created."
-  git clone https://github.com/gyulamad/cpptools-misc.git ../cpptools/misc
+  git clone https://github.com/gyulamad/cpptools-misc.git $TOOLS_DIR
 else
-  echo "Directory '$TOOLS_DIR' already exists."
+  echo "Directory '$TOOLS_DIR' found."
 fi
+echo "Using '$TOOLS_DIR'"
 
-g++ autobuild.cpp --std=c++20 -o "$ORIGINAL_DIR/builder"
+g++ autobuild.cpp -rdynamic --std=c++20 -o "$ORIGINAL_DIR/builder"
 
 # =========================================================
 

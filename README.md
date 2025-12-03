@@ -6,23 +6,23 @@
 
 # 5 minutes tutorial
 
-*   Download or clone the main repo into your project root
+*   Download or clone the main repo next to your project root
 *   Get the autobuild tool, run:
 ```
-autobuild/get-build.sh
+../autobuild/get-build.sh
 ```
 *   Build and run your project:
 ```
-./autobuild . --run
+./builder . --run
 ```
 *   Clean project:
 ```
-./autobuild --clean
+./builder --clean
 ```
 
 # Autobuild Tool
 
-The `utils/autobuild` folder contains the source code for the autobuild tool. This tool is used to automatically build and test the project.
+The `../autobuild` folder contains the source code for the builder tool. This tool is used to automatically build and test the project.
 
 The folder contains the following files:
 
@@ -45,7 +45,7 @@ Example:
 To automatically build the project, run:
 
 ```bash
-./autobuild .
+./builder .
 ```
 
 #### Running Tests
@@ -57,7 +57,7 @@ Example:
 To run tests after building the project, use the `--mode=test --run` flag:
 
 ```bash
-./autobuild . --mode=test --run
+./builder . --mode=test --run
 ```
 
 #### Common Use Cases
@@ -68,25 +68,25 @@ To run tests after building the project, use the `--mode=test --run` flag:
 
 ## Building the Autobuild Tool
 
-The `get-build.sh` script is a shell script that compiles the `autobuild.cpp` file using `g++` and creates an executable named `autobuild`. It uses the C++20 standard.
+The `get-build.sh` script is a shell script that compiles the `autobuild.cpp` file using `g++` and creates an executable named `builder`. It uses the C++20 standard.
 
 To use the script, run:
 
 ```bash
-utils/autobuild/get-build.sh
+../autobuild/get-build.sh
 ```
 
 **Note:** This script should be executed from the project root directory.
 
-This will generate the `autobuild` executable in the same directory.
+This will generate the `builder` executable in the same directory.
 
-The `get-build.sh` script simplifies the compilation process of the `autobuild.cpp` file. It uses `g++` with the `-std=c++20` flag to ensure that the code is compiled using the C++20 standard. This script is essential for building the `autobuild` executable, which is the main tool for automating builds, running tests, and other development tasks.
+The `get-build.sh` script simplifies the compilation process of the `autobuild.cpp` file. It uses `g++` with the `-std=c++20` flag to ensure that the code is compiled using the C++20 standard. This script is essential for building the `builder` executable, which is the main tool for automating builds, running tests, and other development tasks.
 
-After running the script, the `autobuild` executable will be created in the same directory. You can then use this executable to perform various tasks, such as building your project, running tests, and generating reports.
+After running the script, the `builder` executable will be created in the same directory. You can then use this executable to perform various tasks, such as building your project, running tests, and generating reports.
 
 ## Usage [TODO: simplify the readme, tell to use the --help argument and then update the help messages with these:]
 
-The `autobuild` executable accepts the following command-line parameters:
+The `builder` executable accepts the following command-line parameters:
 
 *   `--input` or `-i`: Input file or folder. Specifies the C++ file or folder to be compiled. (Note: if `--input` parameter is not provided, the first command line argument applies)
 *   `--recursive` or `-r`: If the input is a folder, this flag enables recursive reading of the folder to find all C++ files.
@@ -111,7 +111,7 @@ The `autobuild` executable accepts the following command-line parameters:
 To run tests, use the `--mode=test --run` flag:
 
 ```bash
-./autobuild . --mode=test --run
+./builder . --mode=test --run
 ```
 
 This will compile the project with the `test` build mode and run the resulting executable. The `test` build mode is typically configured to include additional testing code and assertions.
@@ -121,7 +121,7 @@ This will compile the project with the `test` build mode and run the resulting e
 To generate a coverage report, use the `--mode=coverage` flag:
 
 ```bash
-./autobuild . --mode=test,coverage --run
+./builder . --mode=test,coverage --run
 ```
 
 This will compile the project with the `coverage` build mode, which enables code coverage analysis. After running the executable, a coverage report will be generated, which shows which parts of the code were executed during the test run.
@@ -130,14 +130,14 @@ This will compile the project with the `coverage` build mode, which enables code
 
 A dependency manager helps organize and track external libraries required by your project. It simplifies the process of including and managing these libraries, ensuring that your project builds correctly and consistently.
 
-The `utils/autobuild/dependencies` directory serves as a central location for storing and managing external libraries required by the autobuild tool. This directory helps to keep your project organized and ensures that all dependencies are easily accessible.
+The `../autobuild/dependencies` directory serves as a central location for storing and managing external libraries required by the autobuild tool. This directory helps to keep your project organized and ensures that all dependencies are easily accessible.
 
 ### Installing Dependencies
 
 Once you have installed the `fltk` library, you can specify it as a dependency when building your project:
 
 ```bash
-./autobuild main.cpp --libs=fltk
+./builder main.cpp --libs=fltk
 ```
 
 This will tell the autobuild tool to link with the `fltk` library. The specific flags used to link with `fltk` are defined in the `libArgs` map in `BuilderApp.hpp`:
@@ -154,9 +154,9 @@ const unordered_map<string, string> libArgs = {
 
 To create custom dependency classes, you need to define a class that inherits from the `Dependency` class. This class should implement the `install` method, which is responsible for installing the dependency.
 
-The `BuilderApp` uses `DynLoader` to load dependency classes from the `utils/autobuild/dependencies` directory. The class name should follow the format `[LibraryName]Dependency`, and the file should be located in the `utils/autobuild/dependencies/[Creator]/[Library]/` directory.
+The `BuilderApp` uses `DynLoader` to load dependency classes from the `../autobuild/dependencies` directory. The class name should follow the format `[LibraryName]Dependency`, and the file should be located in the `../autobuild/dependencies/[Creator]/[Library]/` directory.
 
-For example, to create a custom dependency class for the `foo` library, you would create a file named `FooDependency.hpp` in the `utils/autobuild/dependencies/foo/foo/` directory:
+For example, to create a custom dependency class for the `foo` library, you would create a file named `FooDependency.hpp` in the `../autobuild/dependencies/foo/foo/` directory:
 
 ```cpp
 #pragma once
@@ -197,31 +197,31 @@ Here are some more advanced examples of how to use the autobuild tool:
 *   Build a shared library:
 
     ```bash
-    ./autobuild mylib.cpp --shared
+    ./builder mylib.cpp --shared
     ```
 
 *   Run the executable after building:
 
     ```bash
-    ./autobuild main.cpp --run
+    ./builder main.cpp --run
     ```
 
 *   Compile the executable for debugging:
 
     ```bash
-    ./autobuild main.cpp --mode=debug
+    ./builder main.cpp --mode=debug
     ```
 
 *   Run the executable with arguments:
 
     ```bash
-    ./autobuild main.cpp --run-args "arg1 arg2"
+    ./builder main.cpp --run-args "arg1 arg2"
     ```
 
 *   Generate a coverage report:
 
     ```bash
-    ./autobuild main.cpp --mode=test,coverage --run
+    ./builder main.cpp --mode=test,coverage --run
     ```
 
 ## Troubleshooting
@@ -240,7 +240,7 @@ If you encounter any issues while using the autobuild tool, here are some troubl
 To extend the autobuild tool, you can add new features, build modes, or dependencies.
 
 *   **To add a new build mode,** you need to define a new entry in the `modeFlags` map in `BuilderApp.hpp`. This entry should specify the compiler flags to use for the new build mode.
-*   **To add a new dependency,** you need to create a custom dependency class as described above and place it in the `utils/autobuild/dependencies` directory. You also need to update the `libArgs` map in `BuilderApp.hpp` to specify the flags used to link with the new dependency. [TODO]: libArgs is deprecated and the dependecy classes will do this but as I am writing this it is still in development so this part should be updated!
+*   **To add a new dependency,** you need to create a custom dependency class as described above and place it in the `../autobuild/dependencies` directory. You also need to update the `libArgs` map in `BuilderApp.hpp` to specify the flags used to link with the new dependency. [TODO]: libArgs is deprecated and the dependecy classes will do this but as I am writing this it is still in development so this part should be updated!
 *   **To add a new feature,** you can modify the `autobuild.cpp` file or create a new class that extends the `Builder` or `BuilderApp` class.
 
 ## Contributing

@@ -1,14 +1,14 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 using namespace std;
 
 class Dependency {
 public:
-    Dependency(const string& version): version(version) {}
+    Dependency() {}
     virtual ~Dependency() {}
-    virtual void install() = 0;
-protected:
-    string version;
+    virtual void install(const string) = 0;
+    virtual vector<string> flags() = 0;
 };

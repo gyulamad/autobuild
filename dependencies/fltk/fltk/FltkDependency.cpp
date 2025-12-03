@@ -1,19 +1,25 @@
-#include "../../../../cpptools/misc/EXTERN.hpp"
+
 #include "../../../Dependency.hpp"
+#include "../../../../cpptools/misc/EXTERN.hpp"
 
 #include <iostream>
+#include <vector>
 
 using namespace std;
 
 class FltkDependency: public Dependency {
 public:
-    FltkDependency(const string& version): Dependency(version) {}
+    FltkDependency(): Dependency() {}
     virtual ~FltkDependency() {}
 
-    void install() override {
-        cout << "INSTALL and BUILD FLTK (if not already), version: " << version << endl;
+    void install(const string version) override {
+        // TODO
+        cout << "[TODO] INSTALL and BUILD FLTK (if not already), version: " << version << endl;
     }
 
+    vector<string> flags() override {
+        return {};
+    }
 };
 
-EXTERN(FltkDependency, (const string& version), (version));
+EXTERN(FltkDependency, (), ());
