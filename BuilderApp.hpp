@@ -97,10 +97,6 @@ protected:
     // enum BuildType { BT_EXECUTABLE, BT_PRECOMPILED_HEADER };
 
     void process(Arguments& args) override {
-
-        Arguments::Helps helps;
-
-        args.setHelps(&helps);
         args.addHelp(0, PRM_INPUT.first, 
             "Input file or folder");
         args.addHelp(PRM_INPUT, 
