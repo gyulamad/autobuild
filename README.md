@@ -6,11 +6,11 @@
 
 # 5 minutes tutorial
 
-*   Download or clone the main repo next to your project root
-*   Download or clone the cpptools/misc repo relative to this folder into `../cpptools/misc` folder
+*   Download or clone the main repo into to your project root
+*   Download or clone the cpptools-misc repo relative to this folder into `cpptools/misc` folder
 *   Get the autobuild tool, run:
 ```
-../autobuild/get-build.sh
+autobuild/get-build.sh
 ```
 *   Build and run your project:
 ```
@@ -23,7 +23,7 @@
 
 # Autobuild Tool
 
-The `../autobuild` folder contains the source code for the builder tool. This tool is used to automatically build and test the project.
+The `autobuild` folder contains the source code for the builder tool. This tool is used to automatically build and test the project.
 
 The folder contains the following files:
 
@@ -74,7 +74,7 @@ The `get-build.sh` script is a shell script that compiles the `autobuild.cpp` fi
 To use the script, run:
 
 ```bash
-../autobuild/get-build.sh
+autobuild/get-build.sh
 ```
 
 **Note:** This script should be executed from the project root directory.
@@ -131,7 +131,7 @@ This will compile the project with the `coverage` build mode, which enables code
 
 A dependency manager helps organize and track external libraries required by your project. It simplifies the process of including and managing these libraries, ensuring that your project builds correctly and consistently.
 
-The `../autobuild/dependencies` directory serves as a central location for storing and managing external libraries required by the autobuild tool. This directory helps to keep your project organized and ensures that all dependencies are easily accessible.
+The `dependencies` directory serves as a central location for storing and managing external libraries required by the autobuild tool. This directory helps to keep your project organized and ensures that all dependencies are easily accessible.
 
 ### Installing Dependencies
 
@@ -155,9 +155,9 @@ const unordered_map<string, string> libArgs = {
 
 To create custom dependency classes, you need to define a class that inherits from the `Dependency` class. This class should implement the `install` method, which is responsible for installing the dependency.
 
-The `BuilderApp` uses `DynLoader` to load dependency classes from the `../autobuild/dependencies` directory. The class name should follow the format `[LibraryName]Dependency`, and the file should be located in the `../autobuild/dependencies/[Creator]/[Library]/` directory.
+The `BuilderApp` uses `DynLoader` to load dependency classes from the `dependencies` directory. The class name should follow the format `[LibraryName]Dependency`, and the file should be located in the `dependencies/[Creator]/[Library]/` directory.
 
-For example, to create a custom dependency class for the `foo` library, you would create a file named `FooDependency.hpp` in the `../autobuild/dependencies/foo/foo/` directory:
+For example, to create a custom dependency class for the `foo` library, you would create a file named `FooDependency.hpp` in the `dependencies/foo/foo/` directory:
 
 ```cpp
 #pragma once
@@ -241,7 +241,7 @@ If you encounter any issues while using the autobuild tool, here are some troubl
 To extend the autobuild tool, you can add new features, build modes, or dependencies.
 
 *   **To add a new build mode,** you need to define a new entry in the `modeFlags` map in `BuilderApp.hpp`. This entry should specify the compiler flags to use for the new build mode.
-*   **To add a new dependency,** you need to create a custom dependency class as described above and place it in the `../autobuild/dependencies` directory. You also need to update the `libArgs` map in `BuilderApp.hpp` to specify the flags used to link with the new dependency. [TODO]: libArgs is deprecated and the dependecy classes will do this but as I am writing this it is still in development so this part should be updated!
+*   **To add a new dependency,** you need to create a custom dependency class as described above and place it in the `dependencies` directory. You also need to update the `libArgs` map in `BuilderApp.hpp` to specify the flags used to link with the new dependency. [TODO]: libArgs is deprecated and the dependecy classes will do this but as I am writing this it is still in development so this part should be updated!
 *   **To add a new feature,** you can modify the `autobuild.cpp` file or create a new class that extends the `Builder` or `BuilderApp` class.
 
 ## Contributing

@@ -306,7 +306,7 @@ protected:
     const string DIR_BASE_PATH = get_absolute_path(get_cwd());
     const string DIR_BUILD_FOLDER = ".build";
     const string DIR_BUILD_PATH = fix_path(DIR_BASE_PATH + "/" + DIR_BUILD_FOLDER);
-    const string DIR_DEPENDENCIES = "../autobuild/dependencies";
+    const string DIR_DEPENDENCIES = "autobuild/dependencies";
 
     const string RGX_INCLUDE = "^\\s*#include\\s*\"([^\"]+)\"\\s*";
     const string RGX_DEPENDENCY = "^\\s*//\\s*DEPENDENCY\\s*:\\s*([^\"]+)\\s*";
