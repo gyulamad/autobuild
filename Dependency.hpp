@@ -1,9 +1,13 @@
 #pragma once
 
+#include "../cpptools/misc/__DIR__.hpp"
+
 #include <string>
 #include <vector>
 
 using namespace std;
+
+const string LIBS_DIR = fix_path(__DIR__ + "/../libs");
 
 class Dependency {
 public:
@@ -12,4 +16,5 @@ public:
     virtual void install(const string) = 0;
     virtual vector<string> flags() = 0;
     virtual vector<string> libs() = 0;
+    virtual vector<string> incs() = 0;
 };

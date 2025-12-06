@@ -24,6 +24,10 @@ public:
         return { "-lcurl" };
     }
 
+    vector<string> incs() override {
+        return { };
+    }
+
 };
 
 EXTERN(CurlDependency, (), ());

@@ -366,6 +366,7 @@ protected:
                     vector<string> dependencies = cache[2];
                     vector<string> dependencyFlags;
                     vector<string> dependencyLibs;
+                    vector<string> dependencyIncs;
                     for (const string& dependency: dependencies) {
                         string
                             creator = DEFAULT_DEPENDENCY_CREATOR,
@@ -394,6 +395,7 @@ protected:
                             dependency->install(version);
                             dependencyFlags = array_merge(dependencyFlags, dependency->flags());
                             dependencyLibs = array_merge(dependencyLibs, dependency->libs());
+                            dependencyIncs = array_merge(dependencyIncs, dependency->incs());
                         }
                     }
 
@@ -414,7 +416,7 @@ protected:
                         this->buildSourceFile(
                             cppFile, outputFile, 
                             array_merge(flags, dependencyFlags), 
-                            includeDirs, 
+                            array_merge(includeDirs, dependencyIncs),
                             linkObjectFiles,
                             array_merge(libs, dependencyLibs),
                             strict, verbose

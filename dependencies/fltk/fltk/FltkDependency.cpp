@@ -23,6 +23,10 @@ public:
     vector<string> libs() override {
         return { "`fltk-config --cxxflags --ldflags`" };
     }
+
+    vector<string> incs() override {
+        return { };
+    }
 };
 
 EXTERN(FltkDependency, (), ());
