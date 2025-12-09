@@ -472,7 +472,7 @@ protected:
             if (!is_dir(entry)) continue;
             if (entry == ".git") continue;
             if (!str_starts_with(get_filename(entry), DIR_BUILD_FOLDER)) continue;
-            if (verbose) LOG("Deleting directory: " + entry);
+            if (verbose) LOG("Deleting directory: " + F(F_FILE, entry));
             Executor::execute("rm -rf \"" + entry + "\"");
         }
 
