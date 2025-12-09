@@ -31,7 +31,7 @@ using namespace std;
 
 class Builder {
 public:
-    Builder() {}
+    Builder(vector<string> modes): modes(modes) {}
     virtual ~Builder() {}
     
 protected:
@@ -47,7 +47,7 @@ protected:
         const bool strict,
         const bool verbose
     ) const {
-        if (verbose) LOG("Build source file: " + sourceFile);
+        if (verbose) LOG("Building source file: " + F(F_FILE, sourceFile));
         // NOTE: known bug in gcc shows warning: #pragma once in main file
         // see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=64117
         // const string wrapperFile = 
@@ -106,7 +106,7 @@ protected:
         vector<string>& visitedSourceFiles,
         const bool verbose
     ) const {
-        // if (verbose) LOG("Collecting dependencies for " + F(F_FILE, sourceFile));
+        if (verbose) LOG("Collecting dependencies for " + F(F_FILE, sourceFile));
         const string cacheFile = replaceToBuildPath(sourceFile, buildPath) + EXT_DEP;
         if (file_exists(cacheFile)) {
             string cache = file_get_contents(cacheFile);
@@ -337,4 +337,6 @@ protected:
     const string FLAG_LIBRARY = "-l";
     const string FLAG_INCLDIR = "-I";
     const string FLAG_OUTPUT = "-o";
+
+    vector<string> modes;
 };

@@ -23,7 +23,7 @@
 // TODO: add parallel builds flag
 class BuilderApp: public Builder, public App<ConsoleLogger, Arguments> {
 public:
-    BuilderApp(): Builder(), App() {}
+    BuilderApp(vector<string> modes = {}): Builder(modes), App(), loader(modes) {}
     virtual ~BuilderApp() {}
 
 protected:
@@ -69,7 +69,7 @@ protected:
     const string MODE_SAFE_THREAD = "safe_thread";
     const string MODE_COVERAGE = "coverage";
 
-    const unordered_map<string, vector<string>> modeFlags = {
+    const unordered_map<string, vector<string>> modeFlags = { // TODO: rename modeFlags to modes (check if name conflicts!)
         // { "", array_merge(FLAGS, array_merge(FLAGS_FAST, FLAGS_SAFE_MEMORY)) },
         { MODE_NONE, array_merge(FLAGS, FLAGS_STRICT) },
         { MODE_DEBUG, array_merge(FLAGS, FLAGS_DEBUG) },
@@ -85,7 +85,7 @@ protected:
     const string COVERAGE_INFO_FILE = "coverage.info";
     const string COVERAGE_FOLDER = ".coverage";
     const bool COVERAGE_DARK_MODE = true;
-    const string COVERAGE_BROWSER = "google-chrome"; // "brave-browser"
+    const string COVERAGE_BROWSER = "google-chrome"; // TODO: "brave-browser"..?? (add PREFERED_BROWSER?? as user preference?)
 
     // TODO: move this into dependencies
     // "libs" arguments are added with '-l...' flag but we can override it to simplify things
@@ -137,6 +137,7 @@ protected:
 
         // set "verbose" parameter (on/off) to see the full progress
         const bool verbose = args.has(PRM_VERBOSE);
+        LOG("Verbose: " + (verbose ? "ON" : "OFF"));
 
         // "input" argument or the first parameter is to build
         // can be a .cpp file or an entire folder. 
@@ -182,6 +183,7 @@ protected:
                     throw ERROR("Mode flags are undefined: " + EMPTY_OR(mode));
         }
         sort(modes);
+        if (verbose) LOG("Builder processes" + (!modes.empty() ? " with modes (from arguments): " + implode(",", modes) : "..."));
 
         // Additional parameters to build process
         if (args.has(PRM_ARGS))
@@ -211,13 +213,9 @@ protected:
                 ? get_absolute_path(
                     get_path(DIR_BUILD_PATH) + "/" + args.get<string>(PRM_BUILD_FOLDER)
                 ) : DIR_BUILD_PATH),
-            modes, SEP_MODES
+            modes, 
+            SEP_MODES
         );
-        // const string buildPath = fix_path(
-        //     (args.has(PRM_BUILD_FOLDER) ? 
-        //         args.get<string>(PRM_BUILD_FOLDER) : DIR_BUILD) 
-        //     + (!modes.empty() ? SEP_MODES + implode(SEP_MODES, modes) : "")
-        // );
 
 
         // ====== clean first if needed ======
@@ -231,9 +229,9 @@ protected:
                         uniquePaths.push_back(path);
                 }
                 for (const string& path : uniquePaths)
-                    cleanProject(path);
+                    cleanProject(path, verbose);
             } else // If no input is given, clean the current working directory.
-                cleanProject(get_cwd());
+                cleanProject(get_cwd(), verbose);
         }
 
         // ====== compilation starts at this point ======
@@ -256,7 +254,7 @@ protected:
         for (const string& builtOutputFile: builtOutputFiles) 
             if (verbose) LOG("(Re)built output file: " + builtOutputFile);
 
-        if (verbose) LOG("Build proceed in " + stopper.toString());
+        if (verbose) LOG("Builder proceed in " + stopper.toString());
 
         if (run) for (const string& outputFile: allOutputFiles) {
             string command = outputFile + (!runArgs.empty() ? " " + runArgs : "");
@@ -311,7 +309,7 @@ protected:
         const string& outputExtension,
         bool parallel,
         bool strict,
-        bool verbose
+        bool verbose = true
     ) {
         // Always use thread pool, set size to 1 when parallel=false
         const unsigned int numThreads = parallel ? thread::hardware_concurrency() : 1;
@@ -439,7 +437,8 @@ protected:
                     //     LOG("(Re)built output file: " + outputFile);
                     // }
                 }
-            } catch (...) {
+            } catch (exception& e) {
+                LOG_WARN("Exception in build worker: " + e.what());
                 lock_guard<mutex> lock(outputMutex);
                 exceptions.push_back(current_exception());
             }
@@ -463,17 +462,17 @@ protected:
         return builtOutputFiles;
     }
 
-    void cleanProject(const string& projectRoot) {
-        LOG("Starting project cleanup in: " + F(F_FILE, projectRoot));
+    void cleanProject(const string& projectRoot, bool verbose) {
+        if (verbose) LOG("Starting project cleanup in: " + F(F_FILE, projectRoot));
 
         // 1. Delete build directories first for efficiency.
-        LOG("Removing build directories...");
+        if (verbose) LOG("Removing build directories...");
         const vector<string> topLevelEntries = readdir(projectRoot, "", true, false);
         for (const string& entry : topLevelEntries) {
             if (!is_dir(entry)) continue;
             if (entry == ".git") continue;
             if (!str_starts_with(get_filename(entry), DIR_BUILD_FOLDER)) continue;
-            LOG("Deleting directory: " + entry);
+            if (verbose) LOG("Deleting directory: " + entry);
             Executor::execute("rm -rf \"" + entry + "\"");
         }
 
@@ -489,9 +488,9 @@ protected:
         };
 
         // 3. Scan all remaining files recursively.
-        LOG("Scanning for generated artifacts...");
+        if (verbose) LOG("Scanning for generated artifacts...");
         const vector<string> allFiles = readdir(projectRoot, "*.*", true);
-        LOG("Found " + to_string(allFiles.size()) + " file(s) in project root: " 
+        if (verbose) LOG("Found " + to_string(allFiles.size()) + " file(s) in project root: " 
             + F(F_FILE, projectRoot));
         for (const string& file : allFiles) { 
             if (is_dir(file)) continue; // Skip directories
@@ -510,7 +509,7 @@ protected:
                     }
                 }
                 if (sourceExists) {
-                    LOG("Deleting executable: " + file);
+                    if (verbose) LOG("Deleting executable: " + file);
                     unlink(file);
                 }
                 continue;
@@ -538,24 +537,14 @@ protected:
                 }
                 nth++;
             }
-            // const vector<string> extensionPieces = explode(".", filename);
-            // if (extensionPieces.size() > 1) {
-            //     bool allPartsAreArtifacts = extensionPieces.size() > 2;
-            //     for (size_t i = 2; i < extensionPieces.size(); ++i) {
-            //         if (!in_array(extensionPieces[i], artifactExtensionParts)) {
-            //             allPartsAreArtifacts = false;
-            //             break;
-            //         }
-            //     }
 
             if (allPartsAreArtifacts) {
-                LOG("Deleting artifact: " + file);
+                if (verbose) LOG("Deleting artifact: " + file);
                 unlink(file);
             }
-            // }
         }
 
-        LOG("Project cleanup finished.");
+        if (verbose) LOG("Project cleanup finished.");
     }
 
     DynLoader loader;
