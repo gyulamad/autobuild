@@ -31,7 +31,7 @@ using namespace std;
 
 class Builder {
 public:
-    Builder(vector<string> modes): modes(modes) {}
+    Builder(vector<string> modes, bool verbose): modes(modes), verbose(verbose) {}
     virtual ~Builder() {}
     
 protected:
@@ -150,7 +150,7 @@ protected:
             throw ERROR("Source file already visited (possible include recursion?): " + sourceFile);
         visitedSourceFiles.push_back(sourceFile);
 
-        if (verbose) LOG("Searching includes in " + sourceFile);
+        if (verbose) LOG("Searching includes in " + F(F_FILE, sourceFile));
 
         string sourceCode = file_get_contents(sourceFile);
         vector<string> sourceLines = explode("\n", sourceCode);
@@ -339,4 +339,5 @@ protected:
     const string FLAG_OUTPUT = "-o";
 
     vector<string> modes;
+    bool verbose;
 };

@@ -23,7 +23,7 @@
 // TODO: add parallel builds flag
 class BuilderApp: public Builder, public App<ConsoleLogger, Arguments> {
 public:
-    BuilderApp(vector<string> modes = {}): Builder(modes), App(), loader(modes) {}
+    BuilderApp(vector<string> modes = {}, bool verbose = false): Builder(modes, verbose), App(), loader(modes, verbose) {}
     virtual ~BuilderApp() {}
 
 protected:
@@ -137,7 +137,7 @@ protected:
 
         // set "verbose" parameter (on/off) to see the full progress
         const bool verbose = args.has(PRM_VERBOSE);
-        LOG("Verbose: " + (verbose ? "ON" : "OFF"));
+        // LOG("Verbose: " + (verbose ? "ON" : "OFF"));
 
         // "input" argument or the first parameter is to build
         // can be a .cpp file or an entire folder. 
@@ -252,7 +252,7 @@ protected:
         );
         
         for (const string& builtOutputFile: builtOutputFiles) 
-            if (verbose) LOG("(Re)built output file: " + builtOutputFile);
+            if (verbose) LOG("(Re)built output file: " + F(F_FILE, builtOutputFile));
 
         if (verbose) LOG("Builder proceed in " + stopper.toString());
 
