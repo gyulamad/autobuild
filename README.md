@@ -172,7 +172,7 @@ public:
 };
 ```
 
-You can then specify the dependency in your source code using the `// DEPENDENCY: foo` comment.
+You can then specify dependencies in your source code using the `// DEPENDENCY: foo` comment for each.
 
 ### Specifying Dependencies in Source Code
 
@@ -187,7 +187,7 @@ Example:
 #include <FL/Fl_Box.H>
 ```
 
-In this example, the comment `// DEPENDENCY: fltk` indicates that the code depends on the `fltk` library. This comment should be placed before any `#include` directives or code that uses the library.
+In this example, the comment `// DEPENDENCY: fltk` indicates that the code depends on the `fltk` library. This comment recommended to be placed before any `#include` directives or code that uses the library.
 
 This will tell the autobuild tool to search for the dependency class in the `dependencies/` directory.
 

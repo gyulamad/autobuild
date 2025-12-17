@@ -103,6 +103,7 @@ protected:
         const vector<string>& flags,
         const vector<string>& includeDirs,
         vector<string>& foundImplementations,
+        vector<string>& foundDependencies,
         vector<string>& visitedSourceFiles,
         const bool verbose
     ) const {
@@ -163,12 +164,13 @@ protected:
             for (const string& sourceLine: sourceLines) {
                 line++; 
                 if (regx_match(RGX_DEPENDENCY, sourceLine, &matches)) {
-                    if (verbose) LOG("Dependency found: " + matches[0]);
+                    if (verbose) LOG("Dependency found: " + matches[0] + " in " + F_FILE_LINE(sourceFile, line));
                     const vector<string> splits = explode(",", matches[1]);
                     for (const string& split: splits) {
                         const string dependency = trim(split);
                         if (!in_array(dependency, dependencies)) {
                             dependencies.push_back(dependency);
+                            foundDependencies = array_merge(foundDependencies, dependencies);
                         }
                     }
                 }
@@ -201,6 +203,7 @@ protected:
                             flags, 
                             includeDirs,
                             foundImplementations,
+                            foundDependencies,
                             visitedSourceFiles,
                             verbose
                         );

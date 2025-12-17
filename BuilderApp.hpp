@@ -23,7 +23,7 @@
 // TODO: add parallel builds flag
 class BuilderApp: public Builder, public App<ConsoleLogger, Arguments> {
 public:
-    BuilderApp(vector<string> modes = {}, bool verbose = false): Builder(modes, verbose), App(), loader(modes, verbose) {}
+    BuilderApp(int argc, char* argv[], vector<string> modes = {}, bool verbose = false): Builder(modes, verbose), App(argc, argv), loader(modes, verbose) {}
     virtual ~BuilderApp() {}
 
 protected:
@@ -96,14 +96,14 @@ protected:
 
     // enum BuildType { BT_EXECUTABLE, BT_PRECOMPILED_HEADER };
 
-    void process() override {
-        args->addHelp(0, PRM_INPUT.first, 
+    int process() override {
+        args.addHelp(0, PRM_INPUT.first, 
             "Input file or folder");
-        args->addHelp(PRM_INPUT, 
+        args.addHelp(PRM_INPUT, 
             "Input file or folder");
-        args->addHelp(PRM_RECURSIVE, 
+        args.addHelp(PRM_RECURSIVE, 
             "If the input is a folder, then reads it recursively.");
-        args->addHelp(PRM_MODE, 
+        args.addHelp(PRM_MODE, 
             "Build mode (" 
                 + MODE_DEBUG + ", " 
                 + MODE_FAST + ", " 
@@ -113,70 +113,70 @@ protected:
                 + MODE_SAFE_THREAD + ", " 
                 + MODE_COVERAGE 
                 + ")");
-        args->addHelp(PRM_LIBS, 
+        args.addHelp(PRM_LIBS, 
             "Additional libraries to link (separated by '" + SEP_PRMS + "')");
-        args->addHelp(PRM_BUILD_FOLDER, 
+        args.addHelp(PRM_BUILD_FOLDER, 
             "Output build folder.");
-        args->addHelp(PRM_INCLUDE_DIRS, 
+        args.addHelp(PRM_INCLUDE_DIRS, 
             "Additional include directories (separated by '" + SEP_PRMS + "')");
-        args->addHelp(PRM_ARGS,
+        args.addHelp(PRM_ARGS,
             "Additional build parameters");
-        args->addHelp(PRM_RUN, 
+        args.addHelp(PRM_RUN, 
             "Run the executable after building.");
-        args->addHelp(PRM_RUN_ARGS, 
+        args.addHelp(PRM_RUN_ARGS, 
             "Arguments to pass to the executable when running.");
-        args->addHelp(PRM_SHARED, 
+        args.addHelp(PRM_SHARED, 
             "Build a shared library.");
-        args->addHelp(PRM_VERBOSE,
+        args.addHelp(PRM_VERBOSE,
             "Enable verbose output.");
-        args->addHelp(PRM_CLEAN,
+        args.addHelp(PRM_CLEAN,
             "Clean the project from all generated files and folders.");
 
             
         Stopper stopper;
 
         // set "verbose" parameter (on/off) to see the full progress
-        const bool verbose = args->has(PRM_VERBOSE);
+        const bool verbose = args.has(PRM_VERBOSE);
         // LOG("Verbose: " + (verbose ? "ON" : "OFF"));
 
         // "input" argument or the first parameter is to build
         // can be a .cpp file or an entire folder. 
         // If it's a folder it will look up all the *.cpp file
         // and build them one-by-one applying the same argument(s).
-        const vector<string> inputs = explode(SEP_PRMS, args->has(PRM_INPUT) 
-            ? args->get<string>(PRM_INPUT) 
-            : args->get<string>(1));
+        const vector<string> inputs = explode(SEP_PRMS, args.has(PRM_INPUT) 
+            ? args.get<string>(PRM_INPUT) 
+            : args.get<string>(1));
         vector<string> cppFiles;
         for (const string& input: inputs)
             if (file_exists(input)) {
                 if (!is_dir(input)) cppFiles.push_back(input);
                 else cppFiles = array_merge(cppFiles, readdir(
-                    input, PTRN_EXTS_C_CPP, args->has(PRM_RECURSIVE)
+                    input, PTRN_EXTS_C_CPP, args.has(PRM_RECURSIVE)
                 ));
             }
 
         // "libs" parameter add-s lib with "-l" 
         // or lookup the "libArgs" and replace them.
         vector<string> libs;
-        if (args->has(PRM_LIBS) && !args->get<string>(PRM_LIBS).empty()) {
-            for (const string& lib: explode(SEP_PRMS, args->get<string>(PRM_LIBS)))
+        if (args.has(PRM_LIBS) && !args.get<string>(PRM_LIBS).empty()) {
+            for (const string& lib: explode(SEP_PRMS, args.get<string>(PRM_LIBS)))
                 if (array_key_exists(lib, libArgs)) libs.push_back(libArgs.at(lib));
                 else libs.push_back(FLAG_LIBRARY + lib);
         }
         
         // When "shared" argument (yes/no) is set then compile a shared library
-        const bool shared = args->has(PRM_SHARED);
+        const bool shared = args.has(PRM_SHARED);
 
         // "include-dirs" will add include directories using -I... flag
-        const vector<string> includeDirs = args->has(PRM_INCLUDE_DIRS) ? 
-            explode(SEP_PRMS, args->get<string>(PRM_INCLUDE_DIRS)) : 
+        const vector<string> includeDirs = args.has(PRM_INCLUDE_DIRS) ? 
+            explode(SEP_PRMS, args.get<string>(PRM_INCLUDE_DIRS)) : 
             vector<string>({});
         
         // "mode" argument (multiple) selects the used compiler flags from "modeFlags" map
         vector<string> flags = shared ? array_merge(FLAGS, FLAGS_SHARED) : FLAGS;
         vector<string> modes;
-        if (args->has(PRM_MODE) && !args->get<string>(PRM_MODE).empty()) {
-            modes = explode(SEP_PRMS, args->get<string>(PRM_MODE));
+        if (args.has(PRM_MODE) && !args.get<string>(PRM_MODE).empty()) {
+            modes = explode(SEP_PRMS, args.get<string>(PRM_MODE));
             for (const string& mode: modes)
                 if (array_key_exists(mode, modeFlags)) flags = array_merge(flags, modeFlags.at(mode));
                 else 
@@ -186,8 +186,8 @@ protected:
         if (verbose) LOG("Builder processes" + (!modes.empty() ? " with modes (from arguments): " + implode(",", modes) : "..."));
 
         // Additional parameters to build process
-        if (args->has(PRM_ARGS))
-            flags = array_merge(flags, explode(" ", args->get<string>(PRM_ARGS)));
+        if (args.has(PRM_ARGS))
+            flags = array_merge(flags, explode(" ", args.get<string>(PRM_ARGS)));
 
         // "coverage" argument (on/off) creates coverage report
         const bool coverage = in_array(MODE_COVERAGE, modes);
@@ -200,18 +200,18 @@ protected:
         // "run" and "run-args" parameter runs the executable 
         // after successful compilation with the "run-args" specified 
         // command-line parameters (optional)
-        const bool run = args->has(PRM_RUN) || args->has(PRM_RUN_ARGS);
-        const string runArgs = args->has(PRM_RUN_ARGS) 
-            ? args->get<string>(PRM_RUN_ARGS) : "";
+        const bool run = args.has(PRM_RUN) || args.has(PRM_RUN_ARGS);
+        const string runArgs = args.has(PRM_RUN_ARGS) 
+            ? args.get<string>(PRM_RUN_ARGS) : "";
 
         // TODO: maybe we can use {src} and {pwd} etc. template variables 
         // (using str_replace() helper) to set the path root 
         // instead using build folder for each .cpp separatelly 
         // (similarly for include-dirs?)
         const string buildPath = getBuildFolder(
-            (args->has(PRM_BUILD_FOLDER) 
+            (args.has(PRM_BUILD_FOLDER) 
                 ? get_absolute_path(
-                    get_path(DIR_BUILD_PATH) + "/" + args->get<string>(PRM_BUILD_FOLDER)
+                    get_path(DIR_BUILD_PATH) + "/" + args.get<string>(PRM_BUILD_FOLDER)
                 ) : DIR_BUILD_PATH),
             modes, 
             SEP_MODES
@@ -220,7 +220,7 @@ protected:
 
         // ====== clean first if needed ======
 
-        if (args->has(PRM_CLEAN)) {
+        if (args.has(PRM_CLEAN)) {
             if (!inputs.empty() && !inputs[0].empty()) {
                 vector<string> uniquePaths;
                 for (const string& input : inputs) {
@@ -295,6 +295,7 @@ protected:
             LOG_INFO("Use --" + PRM_RUN.first + " or --" + PRM_RUN_ARGS.first 
                 + " parameter to generate coverage report.");
         }
+        return 0;
     }
 
     [[nodiscard]]
@@ -350,18 +351,19 @@ protected:
 
                     time_ms lastfmtime = filemtime_ms(cppFile);
                     vector<string> foundImplementations;
+                    vector<string> foundDependencies;
                     vector<string> visitedSourceFiles;
                     vector<vector<string>> cache =
                         getIncludesAndImplementationsAndDependencies(
                             lastfmtime, cppFilePath, get_absolute_path(cppFile), buildPath,
-                            flags, includeDirs, foundImplementations, visitedSourceFiles,
+                            flags, includeDirs, foundImplementations, foundDependencies, visitedSourceFiles,
                             verbose
                         );
                     vector<string> includes = cache[0];
                     vector_remove(foundImplementations, cppFile);
                     foundImplementations = array_unique(foundImplementations);
 
-                    vector<string> dependencies = cache[2];
+                    vector<string> dependencies = array_merge(cache[2], foundDependencies);
                     vector<string> dependencyFlags;
                     vector<string> dependencyLibs;
                     vector<string> dependencyIncs;
