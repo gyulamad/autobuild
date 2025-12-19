@@ -29,20 +29,20 @@ public:
 protected:
 
     // Command-line parameters
-    const pair<string, string> PRM_INPUT = { "input", "i" };
-    const pair<string, string> PRM_RECURSIVE = { "recursive", "r" };
-    const pair<string, string> PRM_MODE = { "mode", "m" };
-    const pair<string, string> PRM_LIBS = { "libs", "l" };
-    const pair<string, string> PRM_BUILD_FOLDER = { "build-folder", "o" };
-    const pair<string, string> PRM_INCLUDE_DIRS = { "include-dirs", "I" };
-    const pair<string, string> PRM_ARGS = { "args", "a" };
-    const pair<string, string> PRM_RUN = { "run", "x" };
-    const pair<string, string> PRM_RUN_ARGS = { "run-args", "xargs" };
-    const pair<string, string> PRM_SHARED = { "shared", "s" };
-    const pair<string, string> PRM_VERBOSE = { "verbose", "v" };
+    const Arguments::Key PRM_INPUT = { "input", "i" };
+    const Arguments::Key PRM_RECURSIVE = { "recursive", "r" };
+    const Arguments::Key PRM_MODE = { "mode", "m" };
+    const Arguments::Key PRM_LIBS = { "libs", "l" };
+    const Arguments::Key PRM_BUILD_FOLDER = { "build-folder", "o" };
+    const Arguments::Key PRM_INCLUDE_DIRS = { "include-dirs", "I" };
+    const Arguments::Key PRM_ARGS = { "args", "a" };
+    const Arguments::Key PRM_RUN = { "run", "x" };
+    const Arguments::Key PRM_RUN_ARGS = { "run-args", "xargs" };
+    const Arguments::Key PRM_SHARED = { "shared", "s" };
+    const Arguments::Key PRM_VERBOSE = { "verbose", "v" };
     // TODO 
-    const pair<string, string> PRM_PARALLEL { "parallel", "p"};
-    const pair<string, string> PRM_CLEAN = { "clean", "c" };
+    const Arguments::Key PRM_PARALLEL { "parallel", "p"};
+    const Arguments::Key PRM_CLEAN = { "clean", "c" };
 
     // "mode" argument selected compile flags
     const vector<string> FLAGS = { "--std=c++20" };
@@ -85,7 +85,7 @@ protected:
     const string COVERAGE_INFO_FILE = "coverage.info";
     const string COVERAGE_FOLDER = ".coverage";
     const bool COVERAGE_DARK_MODE = true;
-    const string COVERAGE_BROWSER = "google-chrome"; // TODO: "brave-browser"..?? (add PREFERED_BROWSER?? as user preference?)
+    const string COVERAGE_BROWSER = "brave-browser --ozone-platform-hint=x11"; //"google-chrome"; // TODO: "brave-browser"..?? (add PREFERED_BROWSER?? as user preference?)
 
     // TODO: move this into dependencies
     // "libs" arguments are added with '-l...' flag but we can override it to simplify things
@@ -99,11 +99,11 @@ protected:
     int process() override {
         args.addHelp(0, PRM_INPUT.first, 
             "Input file or folder");
-        args.addHelp(PRM_INPUT, 
+        args.addHelpByKey(PRM_INPUT, 
             "Input file or folder");
-        args.addHelp(PRM_RECURSIVE, 
+        args.addHelpByKey(PRM_RECURSIVE, 
             "If the input is a folder, then reads it recursively.");
-        args.addHelp(PRM_MODE, 
+        args.addHelpByKey(PRM_MODE, 
             "Build mode (" 
                 + MODE_DEBUG + ", " 
                 + MODE_FAST + ", " 
@@ -113,23 +113,23 @@ protected:
                 + MODE_SAFE_THREAD + ", " 
                 + MODE_COVERAGE 
                 + ")");
-        args.addHelp(PRM_LIBS, 
+        args.addHelpByKey(PRM_LIBS, 
             "Additional libraries to link (separated by '" + SEP_PRMS + "')");
-        args.addHelp(PRM_BUILD_FOLDER, 
+        args.addHelpByKey(PRM_BUILD_FOLDER, 
             "Output build folder.");
-        args.addHelp(PRM_INCLUDE_DIRS, 
+        args.addHelpByKey(PRM_INCLUDE_DIRS, 
             "Additional include directories (separated by '" + SEP_PRMS + "')");
-        args.addHelp(PRM_ARGS,
+        args.addHelpByKey(PRM_ARGS,
             "Additional build parameters");
-        args.addHelp(PRM_RUN, 
+        args.addHelpByKey(PRM_RUN, 
             "Run the executable after building.");
-        args.addHelp(PRM_RUN_ARGS, 
+        args.addHelpByKey(PRM_RUN_ARGS, 
             "Arguments to pass to the executable when running.");
-        args.addHelp(PRM_SHARED, 
+        args.addHelpByKey(PRM_SHARED, 
             "Build a shared library.");
-        args.addHelp(PRM_VERBOSE,
+        args.addHelpByKey(PRM_VERBOSE,
             "Enable verbose output.");
-        args.addHelp(PRM_CLEAN,
+        args.addHelpByKey(PRM_CLEAN,
             "Clean the project from all generated files and folders.");
 
             
@@ -144,7 +144,7 @@ protected:
         // If it's a folder it will look up all the *.cpp file
         // and build them one-by-one applying the same argument(s).
         const vector<string> inputs = explode(SEP_PRMS, args.has(PRM_INPUT) 
-            ? args.get<string>(PRM_INPUT) 
+            ? args.getByKey<string>(PRM_INPUT) 
             : args.get<string>(1));
         vector<string> cppFiles;
         for (const string& input: inputs)
@@ -158,8 +158,8 @@ protected:
         // "libs" parameter add-s lib with "-l" 
         // or lookup the "libArgs" and replace them.
         vector<string> libs;
-        if (args.has(PRM_LIBS) && !args.get<string>(PRM_LIBS).empty()) {
-            for (const string& lib: explode(SEP_PRMS, args.get<string>(PRM_LIBS)))
+        if (args.has(PRM_LIBS) && !args.getByKey<string>(PRM_LIBS).empty()) {
+            for (const string& lib: explode(SEP_PRMS, args.getByKey<string>(PRM_LIBS)))
                 if (array_key_exists(lib, libArgs)) libs.push_back(libArgs.at(lib));
                 else libs.push_back(FLAG_LIBRARY + lib);
         }
@@ -169,14 +169,14 @@ protected:
 
         // "include-dirs" will add include directories using -I... flag
         const vector<string> includeDirs = args.has(PRM_INCLUDE_DIRS) ? 
-            explode(SEP_PRMS, args.get<string>(PRM_INCLUDE_DIRS)) : 
+            explode(SEP_PRMS, args.getByKey<string>(PRM_INCLUDE_DIRS)) : 
             vector<string>({});
         
         // "mode" argument (multiple) selects the used compiler flags from "modeFlags" map
         vector<string> flags = shared ? array_merge(FLAGS, FLAGS_SHARED) : FLAGS;
         vector<string> modes;
-        if (args.has(PRM_MODE) && !args.get<string>(PRM_MODE).empty()) {
-            modes = explode(SEP_PRMS, args.get<string>(PRM_MODE));
+        if (args.has(PRM_MODE) && !args.getByKey<string>(PRM_MODE).empty()) {
+            modes = explode(SEP_PRMS, args.getByKey<string>(PRM_MODE));
             for (const string& mode: modes)
                 if (array_key_exists(mode, modeFlags)) flags = array_merge(flags, modeFlags.at(mode));
                 else 
@@ -187,7 +187,7 @@ protected:
 
         // Additional parameters to build process
         if (args.has(PRM_ARGS))
-            flags = array_merge(flags, explode(" ", args.get<string>(PRM_ARGS)));
+            flags = array_merge(flags, explode(" ", args.getByKey<string>(PRM_ARGS)));
 
         // "coverage" argument (on/off) creates coverage report
         const bool coverage = in_array(MODE_COVERAGE, modes);
@@ -202,7 +202,7 @@ protected:
         // command-line parameters (optional)
         const bool run = args.has(PRM_RUN) || args.has(PRM_RUN_ARGS);
         const string runArgs = args.has(PRM_RUN_ARGS) 
-            ? args.get<string>(PRM_RUN_ARGS) : "";
+            ? args.getByKey<string>(PRM_RUN_ARGS) : "";
 
         // TODO: maybe we can use {src} and {pwd} etc. template variables 
         // (using str_replace() helper) to set the path root 
@@ -211,7 +211,7 @@ protected:
         const string buildPath = getBuildFolder(
             (args.has(PRM_BUILD_FOLDER) 
                 ? get_absolute_path(
-                    get_path(DIR_BUILD_PATH) + "/" + args.get<string>(PRM_BUILD_FOLDER)
+                    get_path(DIR_BUILD_PATH) + "/" + args.getByKey<string>(PRM_BUILD_FOLDER)
                 ) : DIR_BUILD_PATH),
             modes, 
             SEP_MODES
@@ -274,7 +274,7 @@ protected:
                 const string createCoverageCommand = 
                     "lcov --no-external --directory . --capture --output-file " 
                         + coverageInfoFilePath + " && \\"
-                    "php ../autobuild/lcov-fixer.php " 
+                    "php autobuild/lcov-fixer.php " // TODO implement lcov-fixer in C++ instead depending on php 
                         + coverageInfoFilePath + " && \\"
                     "genhtml -s --demangle-cpp -o " 
                         + coverageOutputPath 
