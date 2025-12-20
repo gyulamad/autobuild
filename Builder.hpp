@@ -1,31 +1,32 @@
 #pragma once
 
-#include "../cpptools/misc/Logger.hpp"
-#include "../cpptools/misc/Executor.hpp"
-#include "../cpptools/misc/str_replace.hpp"
+#include <string>
+#include <vector>
+#include "../cpptools/misc/datetime_defs.hpp"
+#include "../cpptools/misc/get_cwd.hpp"
 #include "../cpptools/misc/get_absolute_path.hpp"
 #include "../cpptools/misc/implode.hpp"
-#include "../cpptools/misc/explode.hpp"
-#include "../cpptools/misc/filemtime_ms.hpp"
-#include "../cpptools/misc/unlink.hpp"
-#include "../cpptools/misc/regx_match.hpp"
-#include "../cpptools/misc/array_merge.hpp"
-#include "../cpptools/misc/is_dir.hpp"
-#include "../cpptools/misc/mkdir.hpp"
+#include "../cpptools/misc/Executor.hpp"
 #include "../cpptools/misc/highlight_compiler_outputs.hpp"
 #include "../cpptools/misc/file_exists.hpp"
 #include "../cpptools/misc/file_get_contents.hpp"
-#include "../cpptools/misc/file_put_contents.hpp"
+#include "../cpptools/misc/explode.hpp"
+#include "../cpptools/misc/filemtime_ms.hpp"
+#include "../cpptools/misc/unlink.hpp"
 #include "../cpptools/misc/in_array.hpp"
+#include "../cpptools/misc/regx_match.hpp"
 #include "../cpptools/misc/trim.hpp"
+#include "../cpptools/misc/array_merge.hpp"
 #include "../cpptools/misc/get_path.hpp"
 #include "../cpptools/misc/get_extension_only.hpp"
+#include "../cpptools/misc/str_contains.hpp"
+#include "../cpptools/misc/is_dir.hpp"
+#include "../cpptools/misc/mkdir.hpp"
+#include "../cpptools/misc/file_put_contents.hpp"
 #include "../cpptools/misc/replace_extension.hpp"
-#include "../cpptools/misc/get_cwd.hpp"
 #include "../cpptools/misc/get_filename_ext.hpp"
-
-#include <string>
-#include <vector>
+#include "../cpptools/misc/EWHAT.hpp"
+#include "../cpptools/misc/Logger.hpp"
 
 using namespace std;
 
@@ -33,6 +34,8 @@ class Builder {
 public:
     Builder(vector<string> modes, bool verbose): modes(modes), verbose(verbose) {}
     virtual ~Builder() {}
+
+    void setVerbose(bool verbose) { this->verbose = verbose; }
     
 protected:
 
@@ -69,11 +72,18 @@ protected:
             (!libs.empty() ? " " + implode(" ", libs) : "");
 
         if (strict) {
-            buildCmd("iwyu" + arguments);
+            buildCmd("iwyu" + arguments, verbose);
 
             // all header files should starts with '#pragma once'
             string outputs, errors;
-            Executor::execute("find . -path \"./libs/*\" -prune -o -name \"*.h\" -o -name \"*.hpp\" -print | while read file; do head -n 1 \"$file\" | grep -q \"#pragma once\" || echo \"$file\"; done", &outputs, &errors);
+            Executor::execute(
+                "find . -path \"./libs/*\" -prune -o "
+                "\\( -name \"*.h\" -o -name \"*.hpp\" \\) "
+                "! -name \"*.wrapper.h\" ! -name \"*.wrapper.hpp\" -print | "
+                "while read f; do "
+                    "head -n1 \"$f\" | grep -q \"#pragma once\" || echo \"$f\"; "
+                "done",
+                &outputs, &errors);
             if (!outputs.empty() || !errors.empty())
                 throw ERROR(
                     "Some header files does not starts with '#pragma once':\n" 
@@ -87,8 +97,9 @@ protected:
 
     void buildCmd(const string& command, bool show = false) const {
         string outputs, errors;
+        if (show) cout << command << endl;
         int err = Executor::execute(command, &outputs, &errors, false);
-        if (show || err) cout << command << endl;
+        // if (show || err) cout << command << endl;
         if (show && !outputs.empty()) cout << outputs << endl;
         if ((show || err) && !errors.empty()) cerr << highlight_compiler_outputs(errors) << endl;
         if (err)
@@ -105,11 +116,12 @@ protected:
         vector<string>& foundImplementations,
         vector<string>& foundDependencies,
         vector<string>& visitedSourceFiles,
+        const bool pch,
         const bool verbose
     ) const {
-        if (verbose) LOG("Collecting dependencies for " + F(F_FILE, sourceFile));
         const string cacheFile = replaceToBuildPath(sourceFile, buildPath) + EXT_DEP;
         if (file_exists(cacheFile)) {
+            if (verbose) LOG("Load dependencies from cache for " + F(F_FILE, sourceFile));
             string cache = file_get_contents(cacheFile);
             if (cache.empty()) return {};
 
@@ -143,12 +155,16 @@ protected:
                     throw ERROR("Unable to delete: " + F(F_FILE, cacheFile));
             } else return { includes, implementations, dependencies };
         }
+        if (verbose) LOG("Collecting dependencies for " + F(F_FILE, sourceFile));
+        
 
-        // NODE: it may only a warning but I keep it as an error 
+        // NOTE: it may only a warning but I keep it as an error 
         // as I do not want recursive includes in my project 
         // and I want to detect it early when it happening
-        if (in_array(sourceFile, visitedSourceFiles)) 
-            throw ERROR("Source file already visited (possible include recursion?): " + sourceFile);
+        if (!pch && in_array(sourceFile, visitedSourceFiles)) // TODO: It may not needed if pch because it we build them one by one...???
+            throw ERROR("Source file already visited (possible include recursion?): " + F(F_FILE, sourceFile) + " - Note: In case you changed the #include dependencies cleanup your build folder.");
+        // else // TODO throw ERROR ^^^^ Only if --no-pch
+            
         visitedSourceFiles.push_back(sourceFile);
 
         if (verbose) LOG("Searching includes in " + F(F_FILE, sourceFile));
@@ -191,9 +207,62 @@ protected:
 
                     if (in_array(include, includes)) 
                         continue;
-                    lastfmtime = max(lastfmtime, filemtime_ms(include));
-                    // if (verbose) LOG("Dependency found: " + F(F_FILE, include));
+
+                    if (!pch) {
+                        lastfmtime = max(lastfmtime, filemtime_ms(include));
+                        // if (verbose) LOG("Dependency found: " + F(F_FILE, include));
+                    }
+
                     includes.push_back(include);
+
+                    if (pch) {
+                        // === PCH PRECOMPILATION LOGIC (using wrapper to avoid #pragma once warning) ===
+                        // Only precompile actual headers (.h / .hpp), skip other files
+                        string ext = "." + get_extension_only(include);                    
+                        if (in_array(ext, EXTS_H_HPP)) {
+                            string pchFile = getPchPath(include, buildPath);
+                            string wrapperFile = getPchWrapperPath(include, buildPath);
+                            string pchDir = get_path(pchFile);
+
+                            // Rebuild if PCH missing, header newer, or wrapper newer than PCH
+                            bool needsRebuild = !file_exists(pchFile) ||
+                                                filemtime_ms(include) > filemtime_ms(pchFile) ||
+                                                filemtime_ms(wrapperFile) > filemtime_ms(pchFile);
+
+                            if (needsRebuild) {
+                                if (verbose) LOG("Precompiling header (via wrapper): " + F(F_FILE, include) + " -> " + pchFile);
+                                
+                                if (!is_dir(pchDir)) {
+                                    if (!mkdir(pchDir, 0777, true))
+                                        throw ERROR("Failed to create PCH directory: " + pchDir);
+                                }
+
+                                // Create wrapper if missing or header changed
+                                if (!file_exists(wrapperFile) || filemtime_ms(include) > filemtime_ms(wrapperFile)) {
+                                    string wrapperContent = "#include \"" + include + "\"\n";
+                                    file_put_contents(wrapperFile, wrapperContent, false, true);
+                                }
+
+                                // Build command for PCH using the wrapper (no #pragma once → no warning)
+                                string pchArgs =
+                                    implode(" ", flags) + " " +
+                                    FLAG_INCLDIR + implode(" " + FLAG_INCLDIR, includeDirs) + " " +
+                                    "-x c++-header " + // TODO: once it's added to gcc use this instead wrapper files: -Wno-pragma-once-outside-header " +
+                                    wrapperFile + " " +
+                                    FLAG_OUTPUT + " " + pchFile;
+
+                                buildCmd("g++ " + pchArgs, verbose);
+                            } else if (verbose) {
+                                LOG("Using cached PCH: " + pchFile);
+                            }
+
+                            lastfmtime = max(lastfmtime, filemtime_ms(pchFile));
+                            // === END PCH LOGIC ===
+                        } else {
+                            lastfmtime = max(lastfmtime, filemtime_ms(include));
+                        }
+                    }
+
                     vector<vector<string>> cache = 
                         getIncludesAndImplementationsAndDependencies(
                             lastfmtime, 
@@ -205,6 +274,7 @@ protected:
                             foundImplementations,
                             foundDependencies,
                             visitedSourceFiles,
+                            pch,
                             verbose
                         );
                     includes = array_merge(includes, cache[0]);
@@ -214,6 +284,10 @@ protected:
                         get_path(sourceFile), matches[1], 
                         includeDirs, true, false, EXTS_C_CPP
                     );
+                    if (verbose) {
+                        for (const string& implementation: implementations)
+                            LOG("Implementation found: " + F(F_FILE, implementation));
+                    }
                     foundImplementations = array_merge(
                         foundImplementations,
                         implementations
@@ -243,6 +317,21 @@ protected:
         return { includes, implementations, dependencies };
     }
 
+    string getPchPath(
+        const string& headerFile,
+        const string& buildPath
+    ) const {
+        // Mirrors header path into .build-<modes>/pch/ structure
+        string relative = str_replace(DIR_BASE_PATH + "/", "", get_absolute_path(headerFile));
+        return fix_path(buildPath + "/" + DIR_PCH_FOLDER + "/" + relative + EXT_GCH);
+    }
+
+    string getPchWrapperPath(const string& headerFile, const string& buildPath) const {
+        // e.g. .build-debug/pch/core/utils.hpp.wrapper.hpp
+        string relative = str_replace(DIR_BASE_PATH + "/", "", get_absolute_path(headerFile));
+        return fix_path(buildPath + "/" + DIR_PCH_FOLDER + "/" + relative + ".wrapper.hpp");
+    }
+
     vector<string> lookupFileInIncludeDirs(
         const string& basePath,
         const string& include, 
@@ -268,7 +357,7 @@ protected:
             }
             for (const string& includeDir: includeDirs) {
                 includePath = 
-                    get_absolute_path(fix_path(trim(includeDir) + "/" + include));
+                    get_absolute_path(fix_path(trim(includeDir) + "/" + fix_path(basePath + "/" + include)));
                 if (file_exists(includePath)) {
                     results.push_back(includePath);
                     if (stopAtFirstFound) break;
@@ -277,6 +366,9 @@ protected:
             }
             if (throwsIfNotFound && results.empty())
                 throw ERROR("Include not found: " + include);
+        }
+        if (verbose && !results.empty()) {
+            LOG("Implementation(s) found.");
         }
         return results;
     }
@@ -310,6 +402,9 @@ protected:
     const string DIR_BUILD_FOLDER = ".build";
     const string DIR_BUILD_PATH = fix_path(DIR_BASE_PATH + "/" + DIR_BUILD_FOLDER);
     const string DIR_DEPENDENCIES = "autobuild/dependencies";
+
+    const string DIR_PCH_FOLDER = "";  // Subfolder for precompiled headers
+    const string EXT_GCH = ".gch";        // Precompiled header extension
 
     const string RGX_INCLUDE = "^\\s*#include\\s*\"([^\"]+)\"\\s*";
     const string RGX_DEPENDENCY = "^\\s*//\\s*DEPENDENCY\\s*:\\s*([^\"]+)\\s*";

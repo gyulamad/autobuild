@@ -1,9 +1,8 @@
 #pragma once
 
 #include "../cpptools/misc/__DIR__.hpp"
-
-#include <string>
 #include <vector>
+#include <string>
 
 using namespace std;
 

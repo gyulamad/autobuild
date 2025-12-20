@@ -1,24 +1,20 @@
 #pragma once
 
 #include "Builder.hpp"
-#include "Dependency.hpp"
 #include "../cpptools/misc/App.hpp"
 #include "../cpptools/misc/ConsoleLogger.hpp"
 #include "../cpptools/misc/Arguments.hpp"
 #include "../cpptools/misc/DynLoader.hpp"
 #include "../cpptools/misc/Stopper.hpp"
 #include "../cpptools/misc/readdir.hpp"
-#include "../cpptools/misc/array_key_exists.hpp"
-#include "../cpptools/misc/sort.hpp"
+#include <thread>
+#include <queue>
 #include "../cpptools/misc/vector_remove.hpp"
 #include "../cpptools/misc/array_unique.hpp"
 #include "../cpptools/misc/array_shift.hpp"
 #include "../cpptools/misc/ucfirst.hpp"
-#include "../cpptools/misc/in_array.hpp"
+#include "Dependency.hpp"
 #include "../cpptools/misc/get_filename.hpp"
-#include <thread>
-#include <mutex>
-#include <queue>
 
 // TODO: add parallel builds flag
 class BuilderApp: public Builder, public App<ConsoleLogger, Arguments> {
@@ -41,8 +37,11 @@ protected:
     const Arguments::Key PRM_SHARED = { "shared", "s" };
     const Arguments::Key PRM_VERBOSE = { "verbose", "v" };
     // TODO 
-    const Arguments::Key PRM_PARALLEL { "parallel", "p"};
+    const Arguments::Key PRM_PARALLEL { "parallel", "p" };
     const Arguments::Key PRM_CLEAN = { "clean", "c" };
+    
+    // precompiled headers
+    const Arguments::Key PRM_NO_PCH = { "no-pch", "npch" };
 
     // "mode" argument selected compile flags
     const vector<string> FLAGS = { "--std=c++20" };
@@ -131,6 +130,8 @@ protected:
             "Enable verbose output.");
         args.addHelpByKey(PRM_CLEAN,
             "Clean the project from all generated files and folders.");
+        args.addHelpByKey(PRM_NO_PCH, // TODO
+            "Turns off precompiled headers (optional argument)");
 
             
         Stopper stopper;
@@ -168,7 +169,7 @@ protected:
         const bool shared = args.has(PRM_SHARED);
 
         // "include-dirs" will add include directories using -I... flag
-        const vector<string> includeDirs = args.has(PRM_INCLUDE_DIRS) ? 
+        vector<string> includeDirs = args.has(PRM_INCLUDE_DIRS) ? 
             explode(SEP_PRMS, args.getByKey<string>(PRM_INCLUDE_DIRS)) : 
             vector<string>({});
         
@@ -218,6 +219,25 @@ protected:
         );
 
 
+        // "--no-pch" - Turns off precompiled headers (optional argument)
+        const bool pch = !args.has(PRM_NO_PCH);
+        if (pch) {
+            const string pchFolder = "/pch"; // TODO "/" + args.get<string>(PRM_PCH_FOLDER)
+            includeDirs = array_merge({ buildPath + pchFolder }, includeDirs);        
+            // === PCH: Prepend PCH include directory (highest priority) ===
+            string pchIncludeDir = getBuildFolder(
+                (args.has(PRM_BUILD_FOLDER)
+                    ? get_absolute_path(
+                        get_path(DIR_BUILD_PATH) + "/" + args.getByKey<string>(PRM_BUILD_FOLDER)
+                    ) : DIR_BUILD_PATH),
+                modes,
+                SEP_MODES
+            ) + "/" + DIR_PCH_FOLDER;
+            includeDirs = array_merge({ pchIncludeDir }, includeDirs); // Highest priority
+            // vector<string> fullIncludeDirs = includeDirs;
+            // fullIncludeDirs.insert(fullIncludeDirs.begin(), pchIncludeDir);  
+        }
+
         // ====== clean first if needed ======
 
         if (args.has(PRM_CLEAN)) {
@@ -248,7 +268,7 @@ protected:
         const bool parallel = false; // default to sequential for now
         const vector<string> builtOutputFiles = buildCppFiles(allOutputFiles,
             buildPath, cppFiles, modes, flags, includeDirs, libs,
-            outputExtension, parallel, strict, verbose
+            outputExtension, parallel, strict, pch, verbose
         );
         
         for (const string& builtOutputFile: builtOutputFiles) 
@@ -310,7 +330,8 @@ protected:
         const string& outputExtension,
         bool parallel,
         bool strict,
-        bool verbose = true
+        bool pch,
+        bool verbose
     ) {
         // Always use thread pool, set size to 1 when parallel=false
         const unsigned int numThreads = parallel ? thread::hardware_concurrency() : 1;
@@ -357,7 +378,7 @@ protected:
                         getIncludesAndImplementationsAndDependencies(
                             lastfmtime, cppFilePath, get_absolute_path(cppFile), buildPath,
                             flags, includeDirs, foundImplementations, foundDependencies, visitedSourceFiles,
-                            verbose
+                            pch, verbose
                         );
                     vector<string> includes = cache[0];
                     vector_remove(foundImplementations, cppFile);
@@ -383,11 +404,13 @@ protected:
                         if (library == DEFAULT_DEPENDENCY_LIBRARY)
                             throw ERROR("Unnamed library in dependency: " + dependency);
                         const string libClassName = ucfirst(library) + "Dependency";
-                        const string libPathName = /*__DIR__ + "/" +*/ DIR_DEPENDENCIES + "/"
-                            + creator + "/" + library + "/" + libClassName;
+                        const string libPathName = get_absolute_path (
+                            /*__DIR__ + "/" +*/ DIR_DEPENDENCIES + "/"
+                            + creator + "/" + library + "/" + libClassName
+                        );
                         if (verbose) {
                             lock_guard<mutex> outputLock(outputMutex);
-                            LOG("Loading dependency: " + F(F_HIGHLIGHT, libClassName));
+                            LOG("Loading dependency: " + F(F_HIGHLIGHT, libClassName) + " from " + F(F_FILE, libPathName));
                         }
                         {
                             lock_guard<mutex> loaderLock(loaderMutex);
@@ -406,7 +429,7 @@ protected:
                         linkObjectFiles, // allOutputFiles parameter
                         buildPath, foundImplementations, modes,
                         allflags, includeDirs, libs,
-                        EXT_O, false, strict, verbose
+                        EXT_O, false, strict, pch, verbose
                     );
 
                     bool built = false;
@@ -485,6 +508,8 @@ protected:
             string(EXT_O).erase(0, 1),
             string(EXT_SO).erase(0, 1),
             string(EXT_DEP).erase(0, 1),
+            // string(EXT_GCH).erase(0, 1),  // Add .gch cleanup
+            // "wrapper.hpp".substr(1),      // cleans *.wrapper.hpp files
             // Others are not defined as constants
             "test", "gdb", "cov", "gcda", "gcno"
         };
