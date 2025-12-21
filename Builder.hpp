@@ -125,7 +125,8 @@ protected:
     ) {
         // waitFutures(pchBuilderFutures);
         // pchBuilderFutures.reserve(maxPchThreads);
-        const string cacheFile = replaceToBuildPath(sourceFile, buildPath) + EXT_DEP;
+        // const string cacheFile = replaceToBuildPath(sourceFile, buildPath) + EXT_DEP;
+        const string cacheFile = getCachePath(sourceFile, buildPath, DIR_DEP_FOLDER, EXT_DEP);
         if (file_exists(cacheFile)) {
             if (verbose) LOG("Load dependencies from cache for " + F(F_FILE, sourceFile));
             string cache = file_get_contents(cacheFile);
@@ -340,9 +341,22 @@ protected:
         const string& headerFile,
         const string& buildPath
     ) const {
-        // Mirrors header path into .build-<modes>/pch/ structure
-        string relative = str_replace(DIR_BASE_PATH + "/", "", get_absolute_path(headerFile));
-        return fix_path(buildPath + "/" + DIR_PCH_FOLDER + "/" + relative + EXT_GCH);
+        return getCachePath(headerFile, buildPath, DIR_PCH_FOLDER, EXT_GCH);
+        // // Mirrors header path into .build-<modes>/pch/ structure
+        // string relative = str_replace(DIR_BASE_PATH + "/", "", get_absolute_path(headerFile));
+        // return fix_path(buildPath + "/" + DIR_PCH_FOLDER + "/" + relative + EXT_GCH);
+    }
+
+    string getCachePath(
+        const string& inputFile,
+        const string& buildPath,
+        const string& cachePath,
+        const string& ext
+    ) const {
+        // Mirrors header path into .build-<modes>/xyz/ structure
+        string relative = str_replace(DIR_BASE_PATH + "/", "", get_absolute_path(inputFile));
+        return fix_path(buildPath + "/" + cachePath + "/" + relative + ext);
+    
     }
 
     string getPchWrapperPath(const string& headerFile, const string& buildPath) const {
@@ -422,6 +436,7 @@ protected:
     const string DIR_BUILD_FOLDER = ".build";
     const string DIR_BUILD_PATH = fix_path(DIR_BASE_PATH + "/" + DIR_BUILD_FOLDER);
     const string DIR_DEPENDENCIES = "autobuild/dependencies";
+    const string DIR_DEP_FOLDER = "";
 
     const string DIR_PCH_FOLDER = "";  // Subfolder for precompiled headers
     const string EXT_GCH = ".gch";        // Precompiled header extension
