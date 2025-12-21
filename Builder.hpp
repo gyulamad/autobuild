@@ -72,7 +72,7 @@ protected:
             (!libs.empty() ? " " + implode(" ", libs) : "");
 
         if (strict) {
-            buildCmd("iwyu" + arguments, verbose);
+            // buildCmd("iwyu" + arguments, verbose); // TODO - make iwyu optional
 
             // all header files should starts with '#pragma once'
             string outputs, errors;
@@ -89,7 +89,7 @@ protected:
                     "Some header files does not starts with '#pragma once':\n" 
                     + outputs + (errors.empty() ? "" : "\nErrors:\n" + errors));
         }
-        buildCmd("g++" + arguments, verbose);
+        buildCmd(GXX + arguments, verbose);
         
         // if (buildType == BT_PRECOMPILED_HEADER)
         //     file_copy(outputFile, get_path(sourceFile), true);
@@ -208,59 +208,53 @@ protected:
                     if (in_array(include, includes)) 
                         continue;
 
-                    if (!pch) {
-                        lastfmtime = max(lastfmtime, filemtime_ms(include));
-                        // if (verbose) LOG("Dependency found: " + F(F_FILE, include));
-                    }
-
                     includes.push_back(include);
+                    lastfmtime = max(lastfmtime, filemtime_ms(include));
 
-                    if (pch) {
-                        // === PCH PRECOMPILATION LOGIC (using wrapper to avoid #pragma once warning) ===
-                        // Only precompile actual headers (.h / .hpp), skip other files
-                        string ext = "." + get_extension_only(include);                    
-                        if (in_array(ext, EXTS_H_HPP)) {
-                            string pchFile = getPchPath(include, buildPath);
-                            string wrapperFile = getPchWrapperPath(include, buildPath);
-                            string pchDir = get_path(pchFile);
+                    // === PCH PRECOMPILATION LOGIC (using wrapper to avoid #pragma once warning) ===
+                    // Only precompile actual headers (.h / .hpp), skip other files
+                    // string ext = "." + get_extension_only(include);                    
+                    if (pch && in_array("." + get_extension_only(include), EXTS_H_HPP)) {
+                        string pchFile = getPchPath(include, buildPath);
+                        string wrapperFile = getPchWrapperPath(include, buildPath);
+                        string pchDir = get_path(pchFile);
 
-                            // Rebuild if PCH missing, header newer, or wrapper newer than PCH
-                            bool needsRebuild = !file_exists(pchFile) ||
-                                                filemtime_ms(include) > filemtime_ms(pchFile) ||
-                                                filemtime_ms(wrapperFile) > filemtime_ms(pchFile);
+                        // Rebuild if PCH missing, header newer, or wrapper newer than PCH
+                        bool needsRebuild = !file_exists(pchFile) ||
+                                            filemtime_ms(include) > filemtime_ms(pchFile) ||
+                                            filemtime_ms(wrapperFile) > filemtime_ms(pchFile);
 
-                            if (needsRebuild) {
-                                if (verbose) LOG("Precompiling header (via wrapper): " + F(F_FILE, include) + " -> " + pchFile);
-                                
-                                if (!is_dir(pchDir)) {
-                                    if (!mkdir(pchDir, 0777, true))
-                                        throw ERROR("Failed to create PCH directory: " + pchDir);
-                                }
-
-                                // Create wrapper if missing or header changed
-                                if (!file_exists(wrapperFile) || filemtime_ms(include) > filemtime_ms(wrapperFile)) {
-                                    string wrapperContent = "#include \"" + include + "\"\n";
-                                    file_put_contents(wrapperFile, wrapperContent, false, true);
-                                }
-
-                                // Build command for PCH using the wrapper (no #pragma once → no warning)
-                                string pchArgs =
-                                    implode(" ", flags) + " " +
-                                    FLAG_INCLDIR + implode(" " + FLAG_INCLDIR, includeDirs) + " " +
-                                    "-x c++-header " + // TODO: once it's added to gcc use this instead wrapper files: -Wno-pragma-once-outside-header " +
-                                    wrapperFile + " " +
-                                    FLAG_OUTPUT + " " + pchFile;
-
-                                buildCmd("g++ " + pchArgs, verbose);
-                            } else if (verbose) {
-                                LOG("Using cached PCH: " + pchFile);
+                        if (needsRebuild) {
+                            if (verbose) LOG("Precompiling header (via wrapper): " + F(F_FILE, include) + " -> " + pchFile);
+                            
+                            if (!is_dir(pchDir)) {
+                                if (!mkdir(pchDir, 0777, true))
+                                    throw ERROR("Failed to create PCH directory: " + pchDir);
                             }
 
-                            lastfmtime = max(lastfmtime, filemtime_ms(pchFile));
-                            // === END PCH LOGIC ===
-                        } else {
-                            lastfmtime = max(lastfmtime, filemtime_ms(include));
+                            // Create wrapper if missing or header changed
+                            if (!file_exists(wrapperFile) || filemtime_ms(include) > filemtime_ms(wrapperFile)) {
+                                string wrapperContent = "#include \"" + include + "\"\n";
+                                file_put_contents(wrapperFile, wrapperContent, false, true);
+                            }
+
+                            // Build command for PCH using the wrapper (no #pragma once → no warning)
+                            string pchArgs =
+                                " " + implode(" ", flags) + " " +
+                                FLAG_INCLDIR + implode(" " + FLAG_INCLDIR, includeDirs) + " " +
+                                "-x c++-header " + // TODO: once it's added to gcc use this instead wrapper files: -Wno-pragma-once-outside-header " +
+                                wrapperFile + " " +
+                                FLAG_OUTPUT + " " + pchFile;
+
+                            buildCmd(GXX + pchArgs, verbose);
+                        } else if (verbose) {
+                            LOG("Using cached PCH: " + pchFile);
                         }
+
+                        lastfmtime = max(lastfmtime, filemtime_ms(pchFile));
+                        // === END PCH LOGIC ===
+                    // } else {
+                    //     lastfmtime = max(lastfmtime, filemtime_ms(include));
                     }
 
                     vector<vector<string>> cache = 
@@ -396,6 +390,7 @@ protected:
         ) + "/" + sourceFileName);
     }
 
+    const string GXX = "ccache g++";
 
     // build folder
     const string DIR_BASE_PATH = get_absolute_path(get_cwd());

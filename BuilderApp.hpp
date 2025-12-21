@@ -551,12 +551,12 @@ protected:
             for (const string& extensionPiece: extensionPieces) {
                 if (nth > 0) {
                     if (!inArtifactExtensions) {
-                        if (in_array(extensionPieces[nth], artifactExtensionParts)) {
+                        if (in_array(extensionPiece, artifactExtensionParts)) {
                             inArtifactExtensions = true;
                             allPartsAreArtifacts = true;
                         }
                     } else {
-                        if (!in_array(extensionPieces[nth], artifactExtensionParts)) {
+                        if (!in_array(extensionPiece, artifactExtensionParts)) {
                             allPartsAreArtifacts = false;
                             break;
                         }

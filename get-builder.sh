@@ -29,7 +29,9 @@ else
 fi
 echo "Using '$TOOLS_DIR'"
 
-g++ autobuild.cpp -rdynamic --std=c++20 -o "$ORIGINAL_DIR/builder"
+g++ autobuild.cpp -rdynamic --std=c++20 -o "$ORIGINAL_DIR/builder" \
+    -pedantic-errors -Werror -Wall -Wextra -Wunused \
+    -fno-elide-constructors -Ofast -fno-fast-math
 
 # =========================================================
 
