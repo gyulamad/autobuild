@@ -27,6 +27,7 @@
 #include "../cpptools/misc/get_filename_ext.hpp"
 #include "../cpptools/misc/EWHAT.hpp"
 #include "../cpptools/misc/Logger.hpp"
+#include <future>
 
 using namespace std;
 
@@ -106,6 +107,8 @@ protected:
             throw ERROR("Compile failed: " + to_string(err));
     }
 
+    vector<future<void>> pchBuilderFutures; // TODO: make protected
+    mutable std::mutex lastPchFMTimeMutex;  // mutable if used in const methods
     vector<vector<string>> getIncludesAndImplementationsAndDependencies(
         time_ms& lastfmtime,
         const string& basePath, 
@@ -117,8 +120,11 @@ protected:
         vector<string>& foundDependencies,
         vector<string>& visitedSourceFiles,
         const bool pch,
-        const bool verbose
-    ) const {
+        const bool verbose, // TODO: fetch maxPchThreads from and optional command line arguments
+        const unsigned int maxPchThreads = thread::hardware_concurrency() // controls PCH build parallelism, 0=auto, 1=sequential, N=limit to N
+    ) {
+        // waitFutures(pchBuilderFutures);
+        // pchBuilderFutures.reserve(maxPchThreads);
         const string cacheFile = replaceToBuildPath(sourceFile, buildPath) + EXT_DEP;
         if (file_exists(cacheFile)) {
             if (verbose) LOG("Load dependencies from cache for " + F(F_FILE, sourceFile));
@@ -246,15 +252,22 @@ protected:
                                 wrapperFile + " " +
                                 FLAG_OUTPUT + " " + pchFile;
 
-                            buildCmd(GXX + pchArgs, verbose);
+                            if (pchBuilderFutures.size() >= maxPchThreads) waitFutures(pchBuilderFutures);
+                            pchBuilderFutures.push_back(async(launch::async, [this, wrapperFile, pchArgs, verbose, &lastfmtime, pchFile]() {
+                                buildCmd(GXX + pchArgs, verbose);
+                                {
+                                    lock_guard<mutex> lock(lastPchFMTimeMutex);
+                                    lastfmtime = max(lastfmtime, filemtime_ms(pchFile));
+                                }
+                            }));
+                            if (verbose) LOG("Building on thread(s): " + to_string(pchBuilderFutures.size()) + "...");
+                            
                         } else if (verbose) {
                             LOG("Using cached PCH: " + pchFile);
+                            lastfmtime = max(lastfmtime, filemtime_ms(pchFile));
                         }
 
-                        lastfmtime = max(lastfmtime, filemtime_ms(pchFile));
                         // === END PCH LOGIC ===
-                    // } else {
-                    //     lastfmtime = max(lastfmtime, filemtime_ms(include));
                     }
 
                     vector<vector<string>> cache = 
@@ -269,7 +282,8 @@ protected:
                             foundDependencies,
                             visitedSourceFiles,
                             pch,
-                            verbose
+                            verbose,
+                            maxPchThreads
                         );
                     includes = array_merge(includes, cache[0]);
 
@@ -289,15 +303,20 @@ protected:
                 }
             }
         } catch (exception &e) {
+            waitFutures(pchBuilderFutures);
             throw ERROR("Include search failed at " 
                 + F_FILE_LINE(sourceFile, line) + EWHAT);
         }
         const string cachePath = get_path(cacheFile);
         if (!is_dir(cachePath)) {
-            if (file_exists(cachePath))
+            if (file_exists(cachePath)) {
+                waitFutures(pchBuilderFutures);
                 throw ERROR("Cache path is not a folder: " + cachePath);
-            else if (!mkdir(cachePath, 0777, true))
+            }
+            else if (!mkdir(cachePath, 0777, true)) {
+                waitFutures(pchBuilderFutures);
                 throw ERROR("Unable to create folder: " + cachePath);
+            }
         }
         file_put_contents(
             cacheFile, 
@@ -308,7 +327,13 @@ protected:
             (!dependencies.empty() ? implode("\n", dependencies) : ""), 
             false, true
         );
+        waitFutures(pchBuilderFutures);
         return { includes, implementations, dependencies };
+    }
+
+    void waitFutures(vector<future<void>>& futures) {
+        for (future<void>& f: futures) f.get();
+        futures.clear();
     }
 
     string getPchPath(
