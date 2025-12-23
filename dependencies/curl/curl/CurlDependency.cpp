@@ -1,4 +1,4 @@
-#include "../../../Dependency.hpp"
+#include "../../../../cpptools/misc/Dependency.hpp"
 #include "../../../../cpptools/misc/EXTERN.hpp"
 #include <vector>
 
@@ -9,8 +9,12 @@ public:
     CurlDependency(): Dependency() {}
     virtual ~CurlDependency() {}
 
-    void install(const string /*version*/) override {
+    void install() override {
         // TODO cout << "INSTALL lib curl (if not already), version: " << version << endl;
+    }
+
+    bool installed() override {
+        return true; // TODO
     }
 
     vector<string> flags() override {

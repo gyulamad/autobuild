@@ -1,4 +1,4 @@
-#include "../../../Dependency.hpp"
+#include "../../../../cpptools/misc/Dependency.hpp"
 #include "../../../../cpptools/misc/EXTERN.hpp"
 #include <string>
 #include <vector>
@@ -7,10 +7,11 @@ using namespace std;
 
 class FltkDependency: public Dependency {
 public:
-    FltkDependency(const string version): Dependency("fltk/fltk", version) {}
+    FltkDependency(): Dependency() {}
     virtual ~FltkDependency() {}
 
     void install() override {
+        // REPO: "fltk/fltk"
         // TODO cout << "[TODO] INSTALL and BUILD FLTK (if not already), version: " << version << endl;
     }
 
@@ -23,7 +24,7 @@ public:
     }
 
     vector<string> libs() override {
-        return { "`fltk-config --cxxflags --ldflags`" };
+        return { "`fltk-config --cxxflags --ldflags` -lfltk -lfltk_images" };
     }
 
     vector<string> incs() override {
@@ -31,4 +32,4 @@ public:
     }
 };
 
-EXTERN(FltkDependency, (const string& version), (version));
+EXTERN(FltkDependency, (), ());
