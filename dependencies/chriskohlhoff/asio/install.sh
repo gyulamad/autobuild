@@ -30,8 +30,8 @@ cd "$TARGET/$VERSION" || exit 1
 git checkout "$VERSION"
 
 # Build
-# echo "Building..."
-# mkdir build
-# cd build || exit 1
-# cmake -DBUILD_SHARED_LIBS=OFF ..
+echo "Building..."
+# cd asio
+# ./autogen.sh
+# ./configure --without-boost
 # make
