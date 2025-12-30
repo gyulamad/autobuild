@@ -19,13 +19,18 @@ public:
     }
 
     vector<string> libs() override {
-        return { };
+        // const string path = getPath();
+        return {
+            //path + "/single_include/nlohmann/json.o",
+        };
     }
 
     vector<string> incs() override {
+        const string path = getPath();
         return {
-            TARGET + "/" + VERSION + "/build",
-            TARGET + "/" + VERSION + "/src/api"
+            path + "/single_include/nlohmann",
+            // TARGET + "/" + VERSION + "/build",
+            // TARGET + "/" + VERSION + "/src/api"
         };
     }
 };
