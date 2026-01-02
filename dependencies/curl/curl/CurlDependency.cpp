@@ -31,4 +31,4 @@ public:
 
 };
 
-EXTERN(CurlDependency, (), ());
+EXTERN_DEPENDENCY(CurlDependency);

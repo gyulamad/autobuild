@@ -75,4 +75,4 @@ protected:
     string LIBS_DIR = "libs/";
 };
 
-EXTERN(AsioDependency, (), ());
+EXTERN_GITHUB_DEPENDENCY(AsioDependency);

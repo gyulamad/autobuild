@@ -61,4 +61,4 @@ public:
     }
 };
 
-EXTERN(NloptDependency, (), ());
+EXTERN_GITHUB_DEPENDENCY(NloptDependency);

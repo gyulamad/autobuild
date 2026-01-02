@@ -35,4 +35,4 @@ public:
     }
 };
 
-EXTERN(JsonDependency, (), ());
+EXTERN_GITHUB_DEPENDENCY(JsonDependency)

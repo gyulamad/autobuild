@@ -32,4 +32,4 @@ public:
     }
 };
 
-EXTERN(FltkDependency, (), ());
+EXTERN_DEPENDENCY(FltkDependency);
