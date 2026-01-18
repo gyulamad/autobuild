@@ -1,5 +1,4 @@
 #include "../../../../cpptools/misc/Dependency.hpp"
-#include "../../../../cpptools/misc/EXTERN.hpp"
 #include <vector>
 
 using namespace std;
