@@ -1,5 +1,4 @@
 #include "../../../../cpptools/misc/Dependency.hpp"
-#include "../../../../cpptools/misc/EXTERN.hpp"
 #include <string>
 #include <vector>
 
@@ -10,10 +9,12 @@ public:
     FltkDependency(): Dependency() {}
     virtual ~FltkDependency() {}
 
+    // LCOV_EXCL_START
     void install() override {
         // REPO: "fltk/fltk"
         // TODO cout << "[TODO] INSTALL and BUILD FLTK (if not already), version: " << version << endl;
     }
+    // LCOV_EXCL_STOP
 
     bool installed() override {
         return true; // TODO... fake it until we make it!
