@@ -37,15 +37,12 @@ int main() {
         if (str_starts_with(hppFile, "./autobuild")) continue;
         if (str_starts_with(hppFile, "./.build")) continue;
         if (str_ends_with(hppFile, ".wrapper.hpp")) continue;
-        // DBG(hppFile);
         string hppFilename = get_filename(hppFile);
         if (str_starts_with(hppFilename, "test_")) continue;
         if (hppFilename == "TEST.hpp") continue;
         vector<string> codeSplit = explode("\n#ifdef TEST\n", file_get_contents(hppFile));
         if (codeSplit.size() != 2) continue;
         string testHppFile = get_path(hppFile) + "/tests/test_" + get_filename(hppFile);
-        // DBG(get_path(hppFile));
-        // DBG(get_filename(hppFile));
         string testsCode = tpl_replace({
             { "{{hppFilename}}", hppFilename },
             { "{{testsCode}}", codeSplit[1] },

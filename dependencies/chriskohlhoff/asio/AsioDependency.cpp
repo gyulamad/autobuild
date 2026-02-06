@@ -25,12 +25,7 @@ public:
         if(!installed()) { // already instelled?
             LOG("Install asio...");
             const string BASE = fix_path(LIBS_DIR + "/..");
-            DBG(LIBS_DIR);
             const string cmd = __DIR__ + "/install.sh " + REPO + " " + BASE + " " + TARGET + " " + VERSION;
-            DBG(REPO);
-            DBG(BASE);
-            DBG(TARGET);
-            DBG(VERSION);
             LOG("Execute: " + cmd);
             Executor::execute(cmd);
         }
