@@ -173,6 +173,7 @@ public:
 ```
 
 You can then specify dependencies in your source code using the `// DEPENDENCY: foo` comment for each.
+Note: the `// DEPENDENCY:` comment should be always at the very top of the `.cpp` main files!
 
 ### Specifying Dependencies in Source Code
 
