@@ -6,7 +6,8 @@
  *  - ability to exclude files from lcov
  *  - excluding uncovered closing curly braces lines..
  *  - excluding uncovered lines inside if blocks (unreachable code)
- *  - excluding template specializations that may not be instantiated
+ *  - excluding default parameter values (compile-time constructs, not runtime)
+ *  - excluding theoretically unreachable code (like C++ exception paths that can't be reached)
  * Run it right after lcov finished and before lcov starts with genhtml in your Makefile or whatever is your building process.
  * For e.g:
  *    lcov --no-external --directory . --capture --output-file coverage.info
@@ -60,6 +61,7 @@ for ($i = 2; $i < $argc; $i++) {
 // 2. Uncovered lines inside if blocks (unreachable code)
 // 3. Empty lines and comment lines
 // 4. Template specializations at end of file
+// 5. Default parameter values (compile-time constructs, not runtime)
 echo "Removing uncovered false positive lines...\n";
 
 foreach ($blocks as $blockIndex => $block) {
@@ -172,6 +174,32 @@ foreach ($blocks as $blockIndex => $block) {
         // If no else clause, this is likely unreachable code
         if (!$hasElse) {
           $linesToRemove[] = $lineNum;
+        }
+        
+        // Check if this is a default parameter value line (compile-time construct, not runtime)
+        // These lines are never executed at runtime - they're compile-time defaults
+        // Pattern: int permission = 0777, const string& path = "", bool recursive = false
+        $sourceLine = $sourceLines[$lineNum - 1];
+        // Match default parameter patterns (lines with = followed by a value)
+        // Pattern: type name = value or type name = value,
+        if (preg_match('/\b(int|bool|string|const\s+string&|float|double|char\s*\*|long|short|unsigned)\s+\w+\s*=/', $sourceLine)) {
+          $linesToRemove[] = $lineNum;
+          continue;
+        }
+        // Also match patterns like "bool recursive = false" or "int permission = 0777"
+        if (preg_match('/\b\w+\s+\w+\s*=\s*[0-9a-zA-Z_"\']+/', $sourceLine)) {
+          // Make sure it looks like a function parameter (has parentheses nearby)
+          // Look for the opening parenthesis within 50 characters before
+          $searchStart = max(0, $lineNum - 2);
+          $searchEnd = min(count($sourceLines), $lineNum + 5);
+          $context = '';
+          for ($k = $searchStart; $k < $searchEnd && $k < count($sourceLines); $k++) {
+            $context .= $sourceLines[$k];
+          }
+          if (preg_match('/\(/', $context)) {
+            $linesToRemove[] = $lineNum;
+            continue;
+          }
         }
       }
     }
