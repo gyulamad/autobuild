@@ -15,6 +15,15 @@ cd "$SCRIPT_DIR" || exit 1
 # =========================================================
 echo "Compiling autobuild tool..."
 
+# Check for --debug parameter
+DEBUG_MODE=false
+for arg in "$@"; do
+    if [ "$arg" == "--debug" ]; then
+        DEBUG_MODE=true
+        break
+    fi
+done
+
 #mkdir -p ../cpptools/misc
 #git clone https://github.com/gyulamad/cpptools-misc.git ../cpptools/misc
 
@@ -29,9 +38,17 @@ else
 fi
 echo "Using '$TOOLS_DIR'"
 
+# Add debug flag if --debug is passed
+if [ "$DEBUG_MODE" == "true" ]; then
+    echo "Debug mode enabled"
+    DEBUG_FLAGS="-g"
+else
+    DEBUG_FLAGS=""
+fi
+
 g++ autobuild.cpp -rdynamic --std=c++20 -o "$ORIGINAL_DIR/builder" \
     -pedantic-errors -Werror -Wall -Wextra -Wunused \
-    -fno-elide-constructors -Ofast -fno-fast-math
+    -fno-elide-constructors -Ofast -fno-fast-math $DEBUG_FLAGS
 
 # =========================================================
 
