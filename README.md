@@ -10,7 +10,7 @@
 *   Download or clone the cpptools-misc repo relative to this folder into `cpptools/misc` folder
 *   Get the autobuild tool, run:
 ```
-autobuild/get-build.sh
+autobuild/get-builder.sh
 ```
 *   Build and run your project:
 ```
@@ -30,7 +30,7 @@ The folder contains the following files:
 *   `autobuild.cpp`: The main source code file for the autobuild tool.
 *   `Builder.hpp`: Header file defining the Builder class, responsible for managing the build process.
 *   `BuilderApp.hpp`: Header file defining the BuilderApp class, the main application class for the autobuild tool.
-*   `get-build.sh`: A shell script that compiles the `autobuild.cpp` file.
+*   `get-builder.sh`: A shell script that compiles the `autobuild.cpp` file.
 *   `dependencies/`: This folder contains external dependencies required by the autobuild tool.
 
 ### Autobuild Usages
@@ -69,19 +69,19 @@ To run tests after building the project, use the `--mode=test --run` flag:
 
 ## Building the Autobuild Tool
 
-The `get-build.sh` script is a shell script that compiles the `autobuild.cpp` file using `g++` and creates an executable named `builder`. It uses the C++20 standard.
+The `get-builder.sh` script is a shell script that compiles the `autobuild.cpp` file using `g++` and creates an executable named `builder`. It uses the C++20 standard.
 
 To use the script, run:
 
 ```bash
-autobuild/get-build.sh
+autobuild/get-builder.sh
 ```
 
 **Note:** This script should be executed from the project root directory.
 
 This will generate the `builder` executable in the same directory.
 
-The `get-build.sh` script simplifies the compilation process of the `autobuild.cpp` file. It uses `g++` with the `-std=c++20` flag to ensure that the code is compiled using the C++20 standard. This script is essential for building the `builder` executable, which is the main tool for automating builds, running tests, and other development tasks.
+The `get-builder.sh` script simplifies the compilation process of the `autobuild.cpp` file. It uses `g++` with the `-std=c++20` flag to ensure that the code is compiled using the C++20 standard. This script is essential for building the `builder` executable, which is the main tool for automating builds, running tests, and other development tasks.
 
 After running the script, the `builder` executable will be created in the same directory. You can then use this executable to perform various tasks, such as building your project, running tests, and generating reports.
 
@@ -233,7 +233,7 @@ If you encounter any issues while using the autobuild tool, here are some troubl
 *   **Make sure that all dependencies are installed correctly.** Check the error messages to identify missing dependencies and install them using the appropriate package manager or by downloading the source code and building it manually.
 *   **Check the command-line arguments to ensure that they are correct.** Verify that the input file or folder is specified correctly, the build mode is valid, and any additional libraries or include directories are specified correctly.
 *   **Enable verbose output using the `--verbose` or `-v` flag to get more detailed information about the compilation process.** This can help you identify the source of the problem.
-*   **Ensure that the `get-build.sh` script is executed from the project root directory.** The script relies on relative paths and may not work correctly if executed from a different directory.
+*   **Ensure that the `get-builder.sh` script is executed from the project root directory.** The script relies on relative paths and may not work correctly if executed from a different directory.
 *   **If you are using the `coverage` mode, make sure that you have installed `lcov` and `genhtml`.** These tools are required to generate the coverage report.
 *   **If you encounter errors related to missing include files, make sure that the include directories are specified correctly using the `--include-dirs` or `-I` flag.**
 
