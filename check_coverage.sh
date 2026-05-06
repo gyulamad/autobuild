@@ -19,8 +19,11 @@ fi
 
 # --- Helper: ANSI-safe table row ---------------------------------------------
 # Strips escape sequences only to measure visible width, then pads with spaces.
+# Usage: _row <text> [trailing_suffix]  (suffix defaults to empty)
 _row() {
     local text="$1"
+    local suffix="${2:-}"
+
     # Strip standard SGR codes (\e[...m) for length measurement
     local vlen
     vlen=$(printf '%s' "$text" | sed $'s/\x1b\[[0-9;]*m//g' | wc -c)
@@ -28,18 +31,7 @@ _row() {
     local pad=$(( TABLE_WIDTH - vlen ))
     (( pad < 0 )) && pad=0          # safety: don't go negative
 
-    printf '║ %b%*s ║\n' "$text" "$pad" ""
-}
-_rowc() {
-    local text="$1"
-    # Strip standard SGR codes (\e[...m) for length measurement
-    local vlen
-    vlen=$(printf '%s' "$text" | sed $'s/\x1b\[[0-9;]*m//g' | wc -c)
-
-    local pad=$(( TABLE_WIDTH - vlen ))
-    (( pad < 0 )) && pad=0          # safety: don't go negative
-
-    printf '║ %b%*s ║\n' "$text    " "$pad" ""
+    printf '║ %b%s%*s ║\n' "$text" "$suffix" "$pad" ""
 }
 
 # --- Validate inputs ---------------------------------------------------------
@@ -91,11 +83,11 @@ _row "Threshold : ${BOLD}${MIN_THRESHOLD}%${RESET} line coverage"
 # Actual coverage — color depends on pass/fail
 _act="${STATUS_COLOR}${LINE_PCT}%${RESET}"
 if [[ "$MSG_TYPE" == "pass" ]]; then
-    _rowc "${DIM}Actual    : ${_act:0:1} ${BOLD}— Coverage meets threshold.${RESET}"
+    _row "${DIM}Actual    : ${_act:0:1} ${BOLD}— Coverage meets threshold.${RESET}" "    "
 else
     DEFICIT=$(awk -v pct="$LINE_PCT" -v min="$MIN_THRESHOLD" \
         'BEGIN { printf "%.1f", min - pct }')
-    _rowc "${DIM}Actual    : ${_act:0:1} ${RED}${BOLD}— ${DEFICIT}% below threshold.${RESET}"
+    _row "${DIM}Actual    : ${_act:0:1} ${RED}${BOLD}— ${DEFICIT}% below threshold.${RESET}" "    "
 fi
 
 printf "╚%s╝\n\n" "$(printf '═%.0s' $(seq 1 $(( TABLE_WIDTH + 2 ))))"
