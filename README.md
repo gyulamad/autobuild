@@ -135,45 +135,62 @@ The `dependencies` directory serves as a central location for storing and managi
 
 ### Installing Dependencies
 
-Once you have installed the `fltk` library, you can specify it as a dependency when building your project:
+Once you have a dependency specified in your source code, the autobuild tool will automatically detect it and trigger installation if needed:
 
 ```bash
-./builder main.cpp --libs=fltk
+./builder main.cpp --run
 ```
 
-This will tell the autobuild tool to link with the `fltk` library. The specific flags used to link with `fltk` are defined in the `libArgs` map in `BuilderApp.hpp`:
-[TODO] - it will be defined in the dependency classes!
-
-```cpp
-const unordered_map<string, string> libArgs = {
-    { "fltk" , "`fltk-config --cxxflags --ldflags` -lfltk -lfltk_images" },
-};
-```
+The specific flags used to link with each library are defined within the dependency class itself (in `libs()` method), not in BuilderApp.hpp. The old `libArgs` map is deprecated — all linking information lives inside dependency classes.
 
 ### Creating Custom Dependency Classes
-[TODO] - this part is still in development, it need to be updated!
 
-To create custom dependency classes, you need to define a class that inherits from the `Dependency` class. This class should implement the `install` method, which is responsible for installing the dependency.
+To create custom dependency classes, you need to define a file structure under `autobuild/dependencies/[Creator]/[LibraryName]/`:
 
-The `BuilderApp` uses `DynLoader` to load dependency classes from the `dependencies` directory. The class name should follow the format `[LibraryName]Dependency`, and the file should be located in the `dependencies/[Creator]/[Library]/` directory.
-
-For example, to create a custom dependency class for the `foo` library, you would create a file named `FooDependency.hpp` in the `dependencies/foo/foo/` directory:
-
-```cpp
-#pragma once
-
-#include "Dependency.hpp"
-
-class FooDependency : public Dependency {
-public:
-    void install(const std::string& version) override {
-        // Install the foo library
-    }
-};
+```
+autobuild/dependencies/
+└── [Creator]/
+    └── [LibraryName]/
+        ├── install.sh              # Downloads and builds the library
+        └── [Lib]Dependency.cpp     # Dependency class with paths to libs/includes
 ```
 
-You can then specify dependencies in your source code using the `// DEPENDENCY: foo` comment for each.
-Note: the `// DEPENDENCY:` comment should be always at the very top of the `.cpp` main files!
+The dependency class must inherit from `GithubDependency` (for GitHub-hosted libraries) or `Dependency` (for system/local libraries). The class name follows the format `[LibraryName]Dependency`, and the file is named `[Lib]Dependency.cpp`.
+
+For example, for a library specified as `// DEPENDENCY: FTXUI`, you would create:
+- File: `autobuild/dependencies/ArthurSonzogni/FTXUI/FTXUIDependency.cpp`
+- Class name: `class FTXUIDependency : public GithubDependency`
+
+The class must implement three key methods:
+
+```cpp
+#include "../../../../cpptools/misc/GithubDependency.hpp"
+using namespace std;
+
+class <Lib>Dependency: public GithubDependency {
+public:
+    using GithubDependency::GithubDependency;
+
+    void setVersion(string VERSION) override {
+        GithubDependency::setVersion(VERSION);
+        GithubDependency::setRepo("<owner>/<repo>");  // GitHub repo for auto-download
+    }
+
+    vector<string> flags() override { return {}; }   // Extra compiler flags (e.g., -std=c++20)
+
+    vector<string> libs() override {                # Paths to .a/.so files
+        const string path = getPath();              # Returns: libs/<owner>/<repo>/<version>
+        return { path + "/build/lib<lib>.a" };
+    }
+
+    vector<string> incs() override {               # Paths to header directories
+        const string path = getPath();
+        return { path + "/include" };
+    }
+};
+
+EXTERN_GITHUB_DEPENDENCY(<Lib>Dependency)   // Exports class via C linkage for dynamic loading
+```
 
 ### Specifying Dependencies in Source Code
 
@@ -191,6 +208,89 @@ Example:
 In this example, the comment `// DEPENDENCY: fltk` indicates that the code depends on the `fltk` library. This comment recommended to be placed before any `#include` directives or code that uses the library.
 
 This will tell the autobuild tool to search for the dependency class in the `dependencies/` directory.
+
+### GithubDependency Pattern (for GitHub-hosted Libraries)
+
+For libraries hosted on GitHub, use this two-file pattern:
+
+**File 1: `install.sh`** — Downloads source code and builds it. The safe default is "build-in-place" without running `make install`:
+
+```bash
+#!/usr/bin/env bash
+REPO="$1"; BASE="$2"; TARGET="$3"; VERSION="$4"
+
+cd "$BASE" || exit 1
+mkdir -p "$TARGET/$VERSION"
+git clone "https://github.com/$REPO.git" "$TARGET/$VERSION"
+cd "$TARGET/$VERSION" || exit 1
+git checkout "$VERSION"
+
+# Build without install — safest approach for unknown cmake projects
+echo "Building..."
+mkdir -p build && cd build || exit 1
+cmake -DBUILD_SHARED_LIBS=OFF \
+    -D<PROJECT>_BUILD_EXAMPLES=OFF \
+    -D<PROJECT>_BUILD_DOCS=OFF \
+    -D<PROJECT>_BUILD_TESTS=OFF ..
+make -j$(nproc)
+
+# NOTE: Do NOT run make install unless you've verified the install paths work correctly!
+```
+
+**File 2: `<Lib>Dependency.cpp`** — Provides paths to built libraries and headers (see example above).
+
+### Build Patterns Comparison
+
+Different libraries use different build patterns. Here are the two main approaches used in autobuild:
+
+| Pattern | Example | Libraries Location | Headers Location | Install Step |
+|---------|---------|-------------------|------------------|--------------|
+| **Header-only** | [`nlohmann/json`](autobuild/dependencies/nlohmann/json/) | N/A (no `.a` files) | `<repo>/single_include/nlohmann` | No build needed — just clone and checkout version |
+| **Build-in-place** | [`stevengj/nlopt`](autobuild/dependencies/stevengj/nlopt/), [`ArthurSonzogni/FTXUI`](autobuild/dependencies/ArthurSonzogni/FTXUI/) | `<repo>/build/lib<lib>.a` (flat in build/, not inside lib/ subdirectory) | Source-tree's own `<repo>/include/` directory | `cmake .. && make` only — NO `make install`, NO `CMAKE_INSTALL_PREFIX` |
+
+**Key insight:** The "build-in-place" pattern is the safest default for libraries with cmake. It avoids potential issues with `CMAKE_INSTALL_PREFIX` causing nested path bugs (as FTXUI's cmake scripts do). Only use `make install` if you've verified the installation paths are clean and predictable.
+
+### Best Practices & Pitfalls
+
+**Rule 1: Prefer build-in-place over make install when uncertain.**
+The nlopt pattern avoids cmake installation quirks entirely by using files directly from where cmake builds them. This is safer than relying on `CMAKE_INSTALL_PREFIX`.
+
+**Rule 2: Always inspect actual output before writing paths in Dependency.cpp.**
+After building, run these commands to discover real file locations instead of guessing:
+```bash
+find <repo>/build -name "*.a"          # Find static libraries — check if inside lib/ or flat in build/
+find <repo> -name "header.hpp"         # Find header files  
+ls -la <repo>/include/                 # Check include directory structure
+```
+
+**Rule 3: Link order matters for dependent libraries.**
+FTXUI has a dependency chain: `component → dom → screen` (each depends on the previous). The correct link order is from highest-level to base-layer:
+```cpp
+return { 
+    path + "/build/libftxui-component.a",   // Highest level first (depends on dom)
+    path + "/build/libftxui-dom.a",         // Middle layer (depends on screen)  
+    path + "/build/libftxui-screen.a"       // Base layer last
+};
+```
+
+**Rule 4: Class name must match the DEPENDENCY comment exactly.**
+The builder derives the class name dynamically via C linkage export. If your source has `// DEPENDENCY: FTXUI`, then:
+- The class must be named `FTXUIDependency` (not `FtxuiDependency`)
+- The file must be named `FTXUIDependency.cpp`
+
+**Rule 5: Use EXTERN_GITHUB_DEPENDENCY macro for C linkage export.**
+```cpp
+EXTERN_GITHUB_DEPENDENCY(FTXUIDependency)
+// Expands to extern "C" { void* create(); void destroy(void*); }
+// This allows BuilderApp to dynamically load the class via dlopen()
+```
+
+**Common cmake pitfall — nested install paths:**
+Some projects (like FTXUI v6.1.9) have cmake scripts that prepend `$SOURCE_DIR/build` to `CMAKE_INSTALL_PREFIX`, causing files installed at:
+```
+libs/ArthurSonzogni/FTXUI/v6.1.9/libs/ArthurSonzogni/FTXUI/v6.1.9/install/...
+```
+instead of the expected flat path. **Solution:** Avoid `make install` entirely — use build-in-place pattern instead, pointing directly to `<repo>/build/*.a`.
 
 ## Advanced Code Examples
 
