@@ -17,9 +17,11 @@ TARGET_DIR="$(pwd)/$TARGET/$VERSION"
 
 mkdir -p "$TARGET/$VERSION"
 echo "Cloning https://github.com/$REPO.git to $TARGET/$VERSION"
-git clone "https://github.com/$REPO.git" "$TARGET/$VERSION" --recursive
+# Clone WITHOUT --recursive: we checkout the correct branch first, then init submodules.
+# This ensures .gitmodules is read from the target branch (which has gyulamad/imgui), not the default branch (which may have ggerganov/imgui).
+git clone "https://github.com/$REPO.git" "$TARGET/$VERSION"
 
-# Checkout the requested branch (master-imgui_update for updated ImGui version)
+# Checkout the requested branch BEFORE initializing submodules
 cd "$TARGET_DIR" || exit 1
 BRANCH="master-imgui_update"
 if [ "$VERSION" != "" ] && [ "$VERSION" != "main" ]; then
@@ -29,12 +31,8 @@ fi
 echo "Checking out branch: $BRANCH"
 git checkout "$BRANCH" 2>/dev/null || echo "Warning: Could not checkout branch $BRANCH, using default"
 
-# Sync submodule URLs from .gitmodules into local git config (.git/config and .git/modules/.../config)
-# This is required after checkout because .gitmodules changes are NOT automatically applied to local config
-echo "Syncing submodule URLs..."
-git submodule sync
-
-# Re-initialize submodules after checkout (important for updated ImGui)
+# Initialize submodules AFTER checkout so .gitmodules from the correct branch is used
+echo "Initializing submodules..."
 git submodule update --init --recursive
 
 # Create stub headers for builder static analysis compatibility BEFORE building
