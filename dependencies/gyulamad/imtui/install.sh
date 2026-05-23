@@ -29,6 +29,11 @@ fi
 echo "Checking out branch: $BRANCH"
 git checkout "$BRANCH" 2>/dev/null || echo "Warning: Could not checkout branch $BRANCH, using default"
 
+# Sync submodule URLs from .gitmodules into local git config (.git/config and .git/modules/.../config)
+# This is required after checkout because .gitmodules changes are NOT automatically applied to local config
+echo "Syncing submodule URLs..."
+git submodule sync
+
 # Re-initialize submodules after checkout (important for updated ImGui)
 git submodule update --init --recursive
 
