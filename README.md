@@ -105,7 +105,7 @@ The `builder` executable accepts the following command-line parameters:
 *   `--run` or `-x`: Run the executable after building. If this flag is present, the compiled executable will be run after a successful build.
 *   `--run-args` or `-xargs`: Arguments to pass to the executable when running. Specifies arguments to be passed to the executable when it is run.
 *   `--shared` or `-s`: Build a shared library. If this flag is present, the tool will build a shared library instead of an executable.
-*   `--verbose` or `-v`: Enable verbose output. If this flag is present, the tool will print more detailed information about the compilation process.
+*   `--verbose` or `-v`: Enable verbose output. If this flag is present, the tool will print more detailed information about the compilation process. In test mode will show more on the executed tests.
 
 #### Running Tests
 
