@@ -4,7 +4,7 @@
 # Usage: ./coverage.sh <test_file.cpp> [min_percentage] [exclude_patterns]
 #   e.g.: ./coverage.sh test.cpp 80                    (default exclusions applied)
 #          ./coverage.sh my_tests.cpp                  (defaults for threshold + exclusions)
-#          ./coverage.sh test.cpp 90 'cpptools/misc/*,libs/*,.build/*'  (custom exclusions)
+#          ./coverage.sh test.cpp 90 '.build/*'  (custom exclusions)
 #
 # Fails on any of these conditions:
 #   - Test source file does not exist
@@ -19,7 +19,7 @@ set -euo pipefail
 
 TEST_FILE="${1:-}"
 MIN_THRESHOLD="${2:-50}"
-EXCLUDE_PATTERNS="${3:-cpptools/misc/*,libs/*}"
+EXCLUDE_PATTERNS="${3:-cpptools/misc/*,libs/*,autobuild/**}"
 BUILD_DIR=".build/coverage-test"
 RAW_INFO="${BUILD_DIR}/coverage.info"
 
