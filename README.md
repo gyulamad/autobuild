@@ -125,7 +125,65 @@ To generate a coverage report, use the `--mode=coverage` flag:
 ./builder . --mode=test,coverage --run
 ```
 
-This will compile the project with the `coverage` build mode, which enables code coverage analysis. After running the executable, a coverage report will be generated, which shows which parts of the code were executed during the test run.
+This will compile the project with the `coverage` build mode, which enables code coverage analysis. After running the executable, a coverage report will be generated, which shows which parts of the code were executed during the test run. The HTML report is available at `.build/coverage-test/.coverage/index.html`.
+
+#### Quick Coverage Check (ci-friendly)
+
+The [`autobuild/coverage.sh`](autobuild/coverage.sh) script provides a fast line-coverage percentage check with threshold enforcement — ideal for CI pipelines:
+
+```bash
+# Run with default settings (50% threshold, excludes cpptools/misc/* and libs/*)
+./autobuild/coverage.sh test.cpp
+
+# Custom threshold (80%)
+./autobuild/coverage.sh test.cpp 80
+
+# Custom exclusions for your project's structure
+./autobuild/coverage.sh tests.cpp 75 'vendor/*,.external/*'
+
+# No exclusions needed
+./autobuild/coverage.sh my_tests.cpp 60 ''
+```
+
+**Parameters:**
+| Param | Default | Description |
+|-------|---------|-------------|
+| `$1` (test file) | *required* | Path to the test source file |
+| `$2` (threshold) | `50` | Minimum line coverage percentage |
+| `$3` (exclusions) | `cpptools/misc/*,libs/*` | Comma-separated glob patterns to exclude from coverage |
+
+**What it does:**
+1. Validates that test file exists and dependencies (`lcov`, `./builder`) are available
+2. Builds and runs tests with coverage enabled via the autobuild builder's native `--coverage-exclude` flag (exclusions baked in at capture time)
+3. Extracts line/function percentages from filtered `.info` data
+4. Compares against threshold — exits 0 on pass, non-zero on failure
+5. Displays colored success/failure banners for easy CI integration
+
+**Example output:**
+```
+=============================================
+ Coverage Check — test.cpp
+ Threshold : 80% line coverage
+ Excluding : cpptools/misc/*,libs/*
+=============================================
+
+[1/3] Building & running tests with coverage...
+[2/3] Tests passed.
+
+--- Coverage Summary (filtered at capture time) ---
+Line coverage : 97.7%
+Function cov. : 95.5%
+Threshold     : 80% (lines)
+
+*** Status: PASS — coverage meets threshold ***
+
+--- Per-File Coverage ---
+...
+
+╔══════════════════════════════════════════════╗
+║   ✓ TESTS AND COVERAGE PASSED               ║
+╚══════════════════════════════════════════════╝
+```
 
 ## Dependency Management
 
