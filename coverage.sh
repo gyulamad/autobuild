@@ -20,7 +20,7 @@ set -euo pipefail
 TEST_FILE="${1:-}"
 MIN_THRESHOLD="${2:-50}"
 EXCLUDE_PATTERNS="${3:-cpptools/misc/*,libs/*,autobuild/**}"
-BUILD_DIR=".build/coverage-test"
+BUILD_DIR=".build/coverage-strict-test"
 RAW_INFO="${BUILD_DIR}/coverage.info"
 
 echo "============================================="
@@ -49,7 +49,7 @@ fi
 # --- Build and run tests with coverage ----------------------------------------
 echo "[1/3] Building & running tests with coverage..."
 
-BUILDER_OUTPUT=$(./builder "$TEST_FILE" --mode=test,coverage --run \
+BUILDER_OUTPUT=$(./builder "$TEST_FILE" --mode=coverage,strict,test --run \
     --coverage-exclude="$EXCLUDE_PATTERNS" 2>&1) || {
     
     echo ""
