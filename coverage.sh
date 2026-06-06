@@ -49,25 +49,29 @@ fi
 # --- Build and run tests with coverage ----------------------------------------
 echo "[1/3] Building & running tests with coverage..."
 
-BUILDER_OUTPUT=$(./builder "$TEST_FILE" --mode=coverage,strict,test --run \
-    --coverage-exclude="$EXCLUDE_PATTERNS" 2>&1) || {
+mkdir -p "${BUILD_DIR}"
+BUILD_LOG="${BUILD_DIR}/build.log"
+
+# Build and run - output shown in real-time via tee, saved to file for debugging
+if ! ./builder "$TEST_FILE" --mode=coverage,strict,test --run \
+    --coverage-exclude="$EXCLUDE_PATTERNS" 2>&1 | tee "$BUILD_LOG"; then
     
     echo ""
     echo "============================================="
-    echo " BUILD/TEST OUTPUT (full log):"
+    echo " BUILD/TEST FAILED (full log):"
     echo "============================================="
-    echo "$BUILDER_OUTPUT"
+    cat "$BUILD_LOG"
     echo ""
     exit 1
-}
+fi
 
 # Check if tests passed by looking for the success indicator in output
-if ! echo "$BUILDER_OUTPUT" | grep -qE "(All.*test\(s\) passed|test\(s\) passed)"; then
+if ! grep -qE "(All.*test\(s\) passed|test\(s\) passed)" "$BUILD_LOG"; then
     
     echo "============================================="
     echo " BUILD/TEST OUTPUT (full log):"
     echo "============================================="
-    echo "$BUILDER_OUTPUT"
+    cat "$BUILD_LOG"
     echo ""
     exit 1
 fi
