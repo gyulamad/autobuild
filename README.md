@@ -12,9 +12,9 @@
 ```
 autobuild/get-builder.sh
 ```
-*   Build and run your project:
+*   Build and run your project: (use --pty to run in interactive more)
 ```
-./builder . --run
+./builder . --run [--pty]
 ```
 *   Clean project:
 ```
@@ -85,27 +85,9 @@ The `get-builder.sh` script simplifies the compilation process of the `autobuild
 
 After running the script, the `builder` executable will be created in the same directory. You can then use this executable to perform various tasks, such as building your project, running tests, and generating reports.
 
-## Usage [TODO: simplify the readme, tell to use the --help argument and then update the help messages with these:]
-
-The `builder` executable accepts the following command-line parameters:
-
-*   `--input` or `-i`: Input file or folder. Specifies the C++ file or folder to be compiled. (Note: if `--input` parameter is not provided, the first command line argument applies)
-*   `--recursive` or `-r`: If the input is a folder, this flag enables recursive reading of the folder to find all C++ files.
-*   `--mode` or `-m`: Build mode. Selects the compilation flags to use. Available modes are: debug, fast, test, strict, safe_memory, safe_thread, and coverage.
-    *   `debug`: Enables debugging information (`-g`, `-DDEBUG`, `-fno-omit-frame-pointer`).
-    *   `fast`: Optimizes for speed (`-pedantic-errors`, `-Werror`, `-Wall`, `-Wextra`, `-Wunused`, `-fno-elide-constructors`, `-Ofast`, `-fno-fast-math`).
-    *   `test`: Enables testing mode (`-DTEST`).
-    *   `strict`: Enables strict compilation flags (`-pedantic-errors`, `-Werror`, `-Wall`, `-Wextra`, `-Wunused`, `-fno-elide-constructors`).
-    *   `safe_memory`: Enables memory safety checks (`-pedantic-errors`, `-Werror`, `-Wall`, `-Wextra`, `-Wunused`, `-fno-elide-constructors`, `-fsanitize-address-use-after-scope`, `-fsanitize=undefined`, `-fstack-protector`, `-fsanitize=address`, `-fsanitize=leak`).
-    *   `safe_thread`: Enables thread safety checks (`-pedantic-errors`, `-Werror`, `-Wall`, `-Wextra`, `-Wunused`, `-fno-elide-constructors`, `-fsanitize-address-use-after-scope`, `-fsanitize=undefined`, `-fstack-protector`, `-fsanitize=thread`).
-    *   `coverage`: Enables code coverage analysis (`-fprofile-arcs`, `-ftest-coverage`).
-*   `--libs` or `-l`: Additional libraries to link. Specifies additional libraries to link with the compiled executable. Libraries should be separated by a comma (,).
-*   `--build-folder` or `-o`: Output build folder. Specifies the directory where the compiled output will be placed.
-*   `--include-dirs` or `-I`: Additional include directories. Specifies additional directories to search for include files. Directories should be separated by a comma (,).
-*   `--run` or `-x`: Run the executable after building. If this flag is present, the compiled executable will be run after a successful build.
-*   `--run-args` or `-xargs`: Arguments to pass to the executable when running. Specifies arguments to be passed to the executable when it is run.
-*   `--shared` or `-s`: Build a shared library. If this flag is present, the tool will build a shared library instead of an executable.
-*   `--verbose` or `-v`: Enable verbose output. If this flag is present, the tool will print more detailed information about the compilation process. In test mode will show more on the executed tests.
+## Usage 
+To learn more about this use the `--help` argument:
+`./builder --help`
 
 #### Running Tests
 
