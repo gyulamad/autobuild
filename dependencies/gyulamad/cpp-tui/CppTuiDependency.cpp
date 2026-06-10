@@ -9,7 +9,7 @@ public:
 
     void setVersion(string VERSION) override {
         GithubDependency::setVersion(VERSION);
-        GithubDependency::setRepo("jonoton/cpp-tui");
+        GithubDependency::setRepo("gyulamad/cpp-tui");
     }
 
     vector<string> flags() override {
