@@ -1,5 +1,3 @@
-#include "../../../../cpptools/misc/EXTERN.hpp"
-#include "../../../../cpptools/misc/file_exists.hpp"
 #include "../../../../cpptools/misc/GithubDependency.hpp"
 
 using namespace std;
