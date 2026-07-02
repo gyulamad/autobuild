@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # =============================================================================
 # coverage.sh — Quick line coverage percentage check (filtered)
-# Usage: ./coverage.sh <test_file.cpp> [min_percentage] [exclude_patterns]
+# Usage: ./coverage.sh <test_file.cpp> [min_percentage] [exclude_patterns] [--verbose]
 #   e.g.: ./coverage.sh test.cpp 80                    (default exclusions applied)
 #          ./coverage.sh my_tests.cpp                  (defaults for threshold + exclusions)
-#          ./coverage.sh test.cpp 90 '.build/*'  (custom exclusions)
+#          ./coverage.sh test.cpp 90 '.build/*'        (custom exclusions)
+#          ./coverage.sh test.cpp 80 '' --verbose      (verbose builder output)
 #
 # Fails on any of these conditions:
 #   - Test source file does not exist
@@ -20,6 +21,10 @@ set -euo pipefail
 TEST_FILE="${1:-}"
 MIN_THRESHOLD="${2:-50}"
 EXCLUDE_PATTERNS="${3:-cpptools/misc/*,libs/*,autobuild/**}"
+VERBOSE=""
+if [[ "${4:-}" == "--verbose" ]]; then
+    VERBOSE="--verbose"
+fi
 BUILD_DIR=".build/coverage-strict-test"
 RAW_INFO="${BUILD_DIR}/coverage.info"
 
@@ -27,6 +32,9 @@ echo "============================================="
 echo " Coverage Check — $(basename "$TEST_FILE")"
 echo " Threshold : ${MIN_THRESHOLD}% line coverage"
 echo " Excluding : $EXCLUDE_PATTERNS"
+if [[ -n "$VERBOSE" ]]; then
+    echo " Verbose   : enabled"
+fi
 echo "============================================="
 echo ""
 
@@ -36,7 +44,7 @@ command -v lcov >/dev/null 2>&1 || { echo "ERROR: lcov is required. Install with
 
 # --- Validate test file exists -----------------------------------------------
 if [[ -z "$TEST_FILE" ]]; then
-    echo "Usage: $0 <test_file.cpp> [min_percentage] [exclude_patterns]"
+    echo "Usage: $0 <test_file.cpp> [min_percentage] [exclude_patterns] [--verbose]"
     echo "  e.g.: $0 test.cpp 80"
     exit 1
 fi
@@ -54,7 +62,7 @@ BUILD_LOG="${BUILD_DIR}/build.log"
 
 # Build and run - output shown in real-time via tee, saved to file for debugging
 if ! ./builder "$TEST_FILE" --mode=coverage,strict,test --run \
-    --coverage-exclude="$EXCLUDE_PATTERNS" 2>&1 | tee "$BUILD_LOG"; then
+    --coverage-exclude="$EXCLUDE_PATTERNS" $VERBOSE 2>&1 | tee "$BUILD_LOG"; then
     
     echo ""
     echo "============================================="
